@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capitalizze — O poder do seu dinheiro</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="logo">Capitali<span>zze</span></div>
+        <div class="slogan">O poder do seu dinheiro na palma da sua mão</div>
+      </div>
+    </header>
+
+    <!-- Abas de Navegação -->
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="home">Início</button>
+      <button class="tab-btn" data-tab="transactions">Transações</button>
+      <button class="tab-btn" data-tab="goals">Metas</button>
+      <button class="tab-btn" data-tab="simulator">Simulador</button>
+      <button class="tab-btn" data-tab="charts">Gráficos</button>
+    </nav>
+
+    <!-- ABA INÍCIO -->
+    <section id="tab-home" class="tab-content active">
+      <section class="cards">
+        <div class="card">
+          <div class="card-label">Saldo</div>
+          <div class="card-value" id="balance">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Entradas</div>
+          <div class="card-value income" id="income">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Saídas</div>
+          <div class="card-value expense" id="expense">R$ 0,00</div>
+        </div>
+      </section>
+
+      <form class="form" id="tx-form">
+        <input type="text" id="desc" placeholder="Descrição (ex: Salário)" required maxlength="60">
+        <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+        <select id="type">
+          <option value="income">Entrada</option>
+          <option value="expense">Saída</option>
+        </select>
+        <select id="category">
+          <option value="Geral">Geral</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Moradia">Moradia</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Salário">Salário</option>
+          <option value="Investimento">Investimento</option>
+        </select>
+        <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
+      </form>
+    </section>
+
+    <!-- ABA TRANSAÇÕES -->
+    <section id="tab-transactions" class="tab-content">
+      <div class="filter-container">
+        <label for="month-filter">Filtrar por mês:</label>
+        <select id="month-filter">
+          <option value="all">Todos os meses</option>
+        </select>
+      </div>
+      <div class="list">
+        <div id="tx-list"></div>
+      </div>
+    </section>
+
+    <!-- ABA METAS -->
+    <section id="tab-goals" class="tab-content">
+      <form id="goal-form" class="form">
+        <input type="text" id="goal-name" placeholder="Nome da meta (ex: Notebook novo)" required maxlength="40">
+        <input type="number" id="goal-target" placeholder="Valor alvo (R$)" step="0.01" min="1" required>
+        <button type="submit" class="btn btn-full">Criar Nova Meta</button>
+      </form>
+      <div class="list" id="goals-list"></div>
+    </section>
+
+    <!-- NOVA ABA SIMULADOR -->
+    <section id="tab-simulator" class="tab-content">
+      <p class="sim-help">Preencha os campos abaixo para ver o poder dos juros compostos agindo no seu dinheiro.</p>
+      
+      <div class="form sim-form">
+        <div class="input-group">
+          <label>Capital Inicial (R$)</label>
+          <input type="number" id="sim-initial" min="0" step="0.01" value="0">
+        </div>
+        <div class="input-group">
+          <label>Aporte Mensal (R$)</label>
+          <input type="number" id="sim-monthly" min="0" step="0.01" value="0">
+        </div>
+        <div class="input-group">
+          <label>Taxa de Juros (% ao mês)</label>
+          <input type="number" id="sim-rate" min="0" step="0.01" value="0">
+        </div>
+        <div class="input-group">
+          <label>Tempo (Meses)</label>
+          <input type="number" id="sim-time" min="0" step="1" value="0">
+        </div>
+      </div>
+
+      <section class="cards">
+        <div class="card">
+          <div class="card-label">Total Investido</div>
+          <div class="card-value" id="sim-total-invested">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Juros Ganhos</div>
+          <div class="card-value income" id="sim-interest">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Montante Final</div>
+          <div class="card-value" id="sim-final">R$ 0,00</div>
+        </div>
+      </section>
+
+      <div class="chart-container">
+        <h3>Proporção: Investido vs Juros</h3>
+        <div id="sim-chart-bars" class="chart-bars">
+          <div class="empty">Preencha os dados para ver o gráfico.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA GRÁFICOS -->
+    <section id="tab-charts" class="tab-content">
+      <div class="chart-container">
+        <h3>Gastos por Categoria</h3>
+        <div id="chart-bars" class="chart-bars"></div>
+      </div>
+    </section>
+
+    <!-- RODAPÉ -->
+    <footer>
+      <p>Capitalizze &copy; 2026 - v1.0.3</p>
+      <p>Desenvolvido por <strong>SaliX</strong></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
