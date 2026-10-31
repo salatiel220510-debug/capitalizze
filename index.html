@@ -12,10 +12,13 @@
 <body>
   <div class="container">
     <header>
-      <img src="logo-horizontal.png" alt="Capitalizze" class="header-logo">
+      <div class="header-top">
+        <img src="logo-horizontal.png" alt="Capitalizze" class="header-logo">
+        <!-- BOTÃO DE TEMA -->
+        <button id="theme-toggle" class="btn-icon theme-btn" title="Alternar Tema">🌓</button>
+      </div>
       <div class="slogan">O poder do seu dinheiro na palma da sua mão</div>
       
-      <!-- Botões de Backup no topo -->
       <div class="backup-actions">
         <button id="btn-export" class="btn-icon" title="Fazer Backup">⬇️ Backup</button>
         <label for="import-file" class="btn-icon" title="Restaurar Backup">⬆️ Restaurar</label>
@@ -27,6 +30,8 @@
       <button class="tab-btn active" data-tab="home">Início</button>
       <button class="tab-btn" data-tab="transactions">Transações</button>
       <button class="tab-btn" data-tab="goals">Metas</button>
+      <!-- NOVA ABA ORÇAMENTOS -->
+      <button class="tab-btn" data-tab="budgets">Orçamentos</button>
       <button class="tab-btn" data-tab="simulator">Simulador</button>
       <button class="tab-btn" data-tab="reserve">Reserva</button>
       <button class="tab-btn" data-tab="charts">Gráficos</button>
@@ -72,6 +77,23 @@
       <div class="list" id="goals-list"></div>
     </section>
 
+    <!-- NOVA ABA ORÇAMENTOS -->
+    <section id="tab-budgets" class="tab-content">
+      <p class="sim-help">Defina limites mensais de gastos para cada categoria.</p>
+      <form id="budget-form" class="form">
+        <select id="budget-category">
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Moradia">Moradia</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Geral">Geral</option>
+        </select>
+        <input type="number" id="budget-amount" placeholder="Limite (R$)" step="0.01" min="1" required>
+        <button type="submit" class="btn btn-full">Definir Orçamento</button>
+      </form>
+      <div class="list" id="budgets-list"></div>
+    </section>
+
     <!-- ABA SIMULADOR -->
     <section id="tab-simulator" class="tab-content">
       <p class="sim-help">Preencha os campos para ver o poder dos juros compostos.</p>
@@ -89,12 +111,12 @@
       <div class="chart-container"><h3>Proporção: Investido vs Juros</h3><div id="sim-chart-bars" class="chart-bars"></div></div>
     </section>
 
-    <!-- NOVA ABA RESERVA DE EMERGÊNCIA -->
+    <!-- ABA RESERVA -->
     <section id="tab-reserve" class="tab-content">
-      <p class="sim-help">Descubra quanto você precisa guardar para viver tranquilo por alguns meses sem depender de salário.</p>
+      <p class="sim-help">Descubra quanto você precisa guardar para viver tranquilo sem depender de salário.</p>
       <div class="form sim-form">
-        <div class="input-group"><label>Custo de vida mensal (R$)</label><input type="number" id="res-cost" min="0" step="0.01" value="0" placeholder="Ex: 2500"></div>
-        <div class="input-group"><label>Meses de proteção</label><input type="number" id="res-months" min="1" max="24" step="1" value="6" placeholder="Ex: 6"></div>
+        <div class="input-group"><label>Custo de vida mensal (R$)</label><input type="number" id="res-cost" min="0" step="0.01" value="0"></div>
+        <div class="input-group"><label>Meses de proteção</label><input type="number" id="res-months" min="1" max="24" step="1" value="6"></div>
       </div>
       <div class="card" style="text-align: center; padding: 40px 20px;">
         <div class="card-label">Sua Reserva Ideal é</div>
@@ -104,16 +126,25 @@
 
     <!-- ABA GRÁFICOS -->
     <section id="tab-charts" class="tab-content">
-      <div class="chart-container"><h3>Gastos por Categoria</h3><div id="chart-bars" class="chart-bars"></div></div>
+      <!-- GRÁFICO DONUT -->
+      <div class="chart-container">
+        <h3>Distribuição de Gastos</h3>
+        <div id="donut-chart" class="donut-container"></div>
+      </div>
+      <!-- GRÁFICO DE BARRAS -->
+      <div class="chart-container">
+        <h3>Gastos por Categoria</h3>
+        <div id="chart-bars" class="chart-bars"></div>
+      </div>
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.0.4</p>
+      <p>Capitalizze &copy; 2026 - v1.0.5</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
 
-  <!-- MODAL DE METAS (Substitui o prompt) -->
+  <!-- MODAL DE METAS -->
   <div id="goal-modal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="modal-goal-title">Adicionar valor</h3>
@@ -125,6 +156,9 @@
       </div>
     </div>
   </div>
+
+  <!-- CONTAINER DE TOASTS -->
+  <div id="toast-container" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>

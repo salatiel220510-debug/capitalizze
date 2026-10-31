@@ -1,12 +1,7 @@
-const CACHE_NAME = 'capitalizze-v1.0.4';
+const CACHE_NAME = 'capitalizze-v1.0.5'; // Mudou aqui!
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/logo.png',
-  '/logo-horizontal.png',
-  '/manifest.json'
+  '/', '/index.html', '/style.css', '/app.js',
+  '/logo.png', '/logo-horizontal.png', '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
