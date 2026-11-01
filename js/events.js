@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { saveData, loadData, setMasterKey } from './storage.js';
 import { deriveKey } from './crypto.js';
-import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, formatBRL } from './ui.js';
+import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, renderBills, formatBRL } from './ui.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -57,7 +57,7 @@ export function initEvents() {
     showToast('Transação adicionada!');
   });
 
-  // 3. Exclusão de Transação (com Desfazer)
+  // 3. Exclusão de Transação
   document.getElementById('tx-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('.tx-del'); if (!btn) return;
     const id = btn.dataset.id; 
@@ -77,12 +77,69 @@ export function initEvents() {
     });
   });
 
-  // Filtros de Mês, Tipo e Busca
+  // Filtros
   document.getElementById('month-filter').addEventListener('change', renderTransactions);
   document.getElementById('filter-type').addEventListener('change', renderTransactions);
   document.getElementById('search-tx').addEventListener('input', renderTransactions);
 
-  // 4. Metas
+  // NOVO: 4. Formulário de Contas (A Pagar/Receber)
+  document.getElementById('bill-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const desc = document.getElementById('bill-desc').value.trim();
+    const amount = parseFloat(document.getElementById('bill-amount').value);
+    const type = document.getElementById('bill-type').value;
+    const dueDay = parseInt(document.getElementById('bill-day').value);
+
+    if (!desc || !amount || amount <= 0 || !dueDay) return;
+
+    state.bills.push({ id: uid(), desc, amount, type, dueDay });
+    await saveData('capitalizze.bills', state.bills);
+    
+    renderBills();
+    document.getElementById('bill-form').reset();
+    showToast('Conta cadastrada!');
+  });
+
+  // NOVO: Ações nas Contas (Pagar/Receber ou Excluir)
+  document.getElementById('bills-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === 'del-bill') {
+      state.bills = state.bills.filter(b => b.id !== id);
+      await saveData('capitalizze.bills', state.bills);
+      renderBills();
+      showToast('Conta removida.', 'danger');
+    } 
+    else if (action === 'settle-bill') {
+      const bill = state.bills.find(b => b.id === id);
+      if (!bill) return;
+
+      // Transforma a conta em uma transação real
+      const txType = bill.type === 'pay' ? 'expense' : 'income';
+      state.transactions.push({ 
+        id: uid(), 
+        desc: bill.desc, 
+        amount: bill.amount, 
+        type: txType, 
+        category: 'Geral', 
+        bank: state.banks.length > 0 ? state.banks[0] : 'Geral', 
+        createdAt: Date.now() 
+      });
+      
+      // Remove a conta da lista de pendentes
+      state.bills = state.bills.filter(b => b.id !== id);
+      
+      await saveData('capitalizze.transactions', state.transactions);
+      await saveData('capitalizze.bills', state.bills);
+      
+      renderSummary(); updateMonthFilter(); renderTransactions(); renderBills();
+      showToast(`Conta ${bill.type === 'pay' ? 'paga' : 'recebida'} com sucesso!`);
+    }
+  });
+
+  // 5. Metas
   document.getElementById('goal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('goal-name').value.trim(); 
@@ -115,7 +172,7 @@ export function initEvents() {
     }
   });
 
-  // Modal Metas Controles
+  // Modal Metas
   document.getElementById('modal-cancel').addEventListener('click', () => { goalModal.classList.remove('active'); currentGoalId = null; });
   goalModal.addEventListener('click', (e) => { if (e.target === goalModal) { goalModal.classList.remove('active'); currentGoalId = null; } });
   document.getElementById('modal-confirm').addEventListener('click', async () => {
@@ -130,7 +187,7 @@ export function initEvents() {
     goalModal.classList.remove('active'); currentGoalId = null;
   });
 
-  // 5. Orçamentos
+  // 6. Orçamentos
   document.getElementById('budget-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const cat = document.getElementById('budget-category').value; 
@@ -150,7 +207,7 @@ export function initEvents() {
     renderBudgets(); showToast('Orçamento removido.', 'danger');
   });
 
-  // 6. Perfil e Configurações
+  // 7. Perfil e Configurações
   let currentAvatarBase64 = state.profile.avatar || null;
   document.getElementById('prof-avatar-input').addEventListener('change', (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -200,7 +257,7 @@ export function initEvents() {
     }
   });
 
-  // 7. Segurança - Alterar PIN
+  // Segurança - Alterar PIN
   const changePinModal = document.getElementById('change-pin-modal');
   
   document.getElementById('btn-change-pin').addEventListener('click', () => {
@@ -238,6 +295,7 @@ export function initEvents() {
     await saveData('capitalizze.goals', state.goals);
     await saveData('capitalizze.budgets', state.budgets);
     await saveData('capitalizze.banks', state.banks);
+    await saveData('capitalizze.bills', state.bills);
     await saveData('capitalizze.profile', state.profile);
 
     changePinModal.classList.remove('active');
@@ -290,9 +348,9 @@ export function initEvents() {
   };
   [dailyInc, dailyFix].forEach(el => el.addEventListener('input', calcDaily));
 
-  // 9. Backup
+  // 9. Backup JSON e Exportar CSV
   document.getElementById('btn-export').addEventListener('click', () => {
-    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, profile: state.profile };
+    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, bills: state.bills, profile: state.profile };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `capitalizze-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -309,6 +367,7 @@ export function initEvents() {
         if (data.goals) { state.goals = data.goals; await saveData('capitalizze.goals', data.goals); }
         if (data.budgets) { state.budgets = data.budgets; await saveData('capitalizze.budgets', data.budgets); }
         if (data.banks) { state.banks = data.banks; await saveData('capitalizze.banks', data.banks); }
+        if (data.bills) { state.bills = data.bills; await saveData('capitalizze.bills', data.bills); }
         if (data.profile) { state.profile = data.profile; await saveData('capitalizze.profile', data.profile); }
         
         showToast('Backup restaurado! Recarregando...', 'success');
@@ -316,6 +375,37 @@ export function initEvents() {
       } catch (err) { showToast('Erro ao ler o arquivo.', 'danger'); }
     };
     reader.readAsText(file);
+  });
+
+  // NOVO: EXPORTAR CSV (Excel)
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if (state.transactions.length === 0) { showToast('Não há transações para exportar.', 'danger'); return; }
+    
+    // Cabeçalhos
+    const headers = ['Data', 'Descrição', 'Categoria', 'Banco', 'Tipo', 'Valor'];
+    
+    // Linhas
+    const rows = state.transactions.map(t => {
+      const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
+      const desc = `"${t.desc.replace(/"/g, '""')}"`; // Escapa aspas duplas
+      const category = `"${t.category}"`;
+      const bank = `"${t.bank || 'Geral'}"`;
+      const type = t.type === 'income' ? 'Entrada' : 'Saida';
+      const amount = t.amount.toFixed(2).replace('.', ','); // Formato brasileiro
+      return [date, desc, category, bank, type, amount].join(';'); // Separador ';' é o padrão do Excel no Brasil
+    });
+
+    // Adiciona o BOM (\uFEFF) para o Excel ler os acentos corretamente
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `capitalizze-extrato-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Relatório Excel gerado!');
   });
 }
 

@@ -9,6 +9,7 @@ export function renderAll() {
   renderCharts();
   renderGoals();
   renderBudgets();
+  renderBills(); // NOVO
   renderProfile();
   renderBanksSettings();
   updateBankSelects();
@@ -172,6 +173,38 @@ export function renderBudgets() {
     const percent = Math.min((spent / limit) * 100, 100);
     let barClass = 'safe'; if (percent >= 100) barClass = 'danger'; else if (percent >= 80) barClass = 'warning';
     return `<div class="budget-item"><div class="budget-header"><div class="budget-title">${cat}</div><div class="budget-values" style="color: ${percent >= 100 ? 'var(--danger)' : 'var(--muted)'}">${formatBRL(spent)} de ${formatBRL(limit)}</div></div><div class="progress-wrapper"><div class="progress-bar ${barClass}" style="width: ${percent}%"></div></div><div class="goal-actions"><button class="btn btn-sm danger" data-action="del-budget" data-cat="${cat}">Remover</button></div></div>`;
+  }).join('');
+}
+
+// NOVO: RENDERIZAR CONTAS A PAGAR/RECEBER
+export function renderBills() {
+  const billsList = document.getElementById('bills-list');
+  if (state.bills.length === 0) { 
+    billsList.innerHTML = '<div class="empty">Nenhuma conta cadastrada no momento.</div>'; 
+    return; 
+  }
+
+  // Ordena pelo dia do vencimento
+  const sortedBills = [...state.bills].sort((a, b) => a.dueDay - b.dueDay);
+
+  billsList.innerHTML = sortedBills.map(b => {
+    const isPay = b.type === 'pay';
+    const color = isPay ? 'var(--danger)' : 'var(--success)';
+    const label = isPay ? 'Pagar' : 'Receber';
+    const btnClass = isPay ? 'pay' : 'receive';
+    const sign = isPay ? '-' : '+';
+    
+    return `
+      <div class="tx">
+        <div class="tx-info">
+          <div class="tx-desc">${escapeHtml(b.desc)}</div>
+          <div class="tx-meta">Vence dia ${b.dueDay}</div>
+        </div>
+        <div class="tx-amount" style="color: ${color}">${sign} ${formatBRL(b.amount)}</div>
+        <button class="btn-settle ${btnClass}" data-action="settle-bill" data-id="${b.id}">${label}</button>
+        <button class="tx-del" data-action="del-bill" data-id="${b.id}" title="Excluir">✕</button>
+      </div>
+    `;
   }).join('');
 }
 

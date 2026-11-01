@@ -24,11 +24,8 @@
         <input type="password" id="new-pin-input" maxlength="6" inputmode="numeric" placeholder="••••" style="text-align:center; font-size: 1.5rem; letter-spacing: 5px; width: 100%;">
         
         <label style="font-size: 0.85rem; color: var(--muted); margin-top: 15px; margin-bottom: 5px; display: block;">Quais bancos você usa?</label>
-        <div id="setup-banks-grid" class="banks-grid" style="grid-template-columns: 1fr 1fr;">
-          <!-- Checkboxes gerados via JS -->
-        </div>
+        <div id="setup-banks-grid" class="banks-grid" style="grid-template-columns: 1fr 1fr;"></div>
       </div>
-
       <button id="setup-submit" class="btn btn-full">Criar Conta e Acessar</button>
     </div>
   </div>
@@ -56,6 +53,7 @@
     <nav class="tabs">
       <button class="tab-btn active" data-tab="home">Início</button>
       <button class="tab-btn" data-tab="transactions">Transações</button>
+      <button class="tab-btn" data-tab="bills">Contas</button>
       <button class="tab-btn" data-tab="goals">Metas</button>
       <button class="tab-btn" data-tab="budgets">Orçamentos</button>
       <button class="tab-btn" data-tab="simulator">Simulador</button>
@@ -105,6 +103,22 @@
         <input type="text" id="search-tx" placeholder="Buscar por descrição ou categoria..." style="flex: 1; min-width: 200px;">
       </div>
       <div class="list"><div id="tx-list"></div></div>
+    </section>
+
+    <!-- NOVA ABA CONTAS (A PAGAR/RECEBER) -->
+    <section id="tab-bills" class="tab-content">
+      <p class="sim-help">Cadastre contas fixas ou boletos para não esquecer.</p>
+      <form id="bill-form" class="form">
+        <input type="text" id="bill-desc" placeholder="Descrição (ex: Aluguel, Netflix)" required maxlength="40">
+        <input type="number" id="bill-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+        <select id="bill-type">
+          <option value="pay">A Pagar</option>
+          <option value="receive">A Receber</option>
+        </select>
+        <input type="number" id="bill-day" placeholder="Dia Venc. (1-31)" min="1" max="31" required>
+        <button type="submit" class="btn btn-full">Cadastrar Conta</button>
+      </form>
+      <div class="list" id="bills-list"></div>
     </section>
 
     <!-- ABA METAS -->
@@ -252,17 +266,18 @@
       </div>
 
       <div class="chart-container">
-        <h3>Backup de Dados</h3>
-        <div class="backup-actions" style="justify-content: flex-start;">
-          <button id="btn-export" class="btn btn-outline">⬇️ Exportar Dados</button>
+        <h3>Backup e Exportação</h3>
+        <div class="backup-actions" style="justify-content: flex-start; flex-wrap: wrap;">
+          <button id="btn-export" class="btn btn-outline">⬇️ Backup (JSON)</button>
           <label for="import-file" class="btn btn-outline">⬆️ Restaurar</label>
           <input type="file" id="import-file" accept=".json" style="display: none;">
+          <button id="btn-export-csv" class="btn btn-outline">📊 Exportar para Excel (CSV)</button>
         </div>
       </div>
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.1.0</p>
+      <p>Capitalizze &copy; 2026 - v1.1.1</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
@@ -285,8 +300,8 @@
     <div class="modal-content">
       <h3>Alterar PIN de Acesso</h3>
       <p class="modal-desc">Isso vai re-criptografar todos os seus dados com a nova senha.</p>
-      <input type="password" id="old-pin" placeholder="PIN Atual (4 a 6 dígitos)" maxlength="6" style="margin-bottom: 12px;">
-      <input type="password" id="new-pin" placeholder="Novo PIN (4 a 6 dígitos)" maxlength="6">
+      <input type="password" id="old-pin" placeholder="PIN Atual" maxlength="6" style="margin-bottom: 12px;">
+      <input type="password" id="new-pin" placeholder="Novo PIN" maxlength="6">
       <div class="modal-actions">
         <button class="btn btn-outline" id="cancel-change-pin">Cancelar</button>
         <button class="btn" id="confirm-change-pin">Salvar Novo PIN</button>
@@ -294,9 +309,7 @@
     </div>
   </div>
 
-  <!-- CONTAINER DE TOASTS -->
   <div id="toast-container" class="toast-container"></div>
-
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

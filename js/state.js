@@ -3,6 +3,7 @@ export let state = {
   goals: [],
   budgets: {},
   banks: [],
+  bills: [], // NOVO: Contas a pagar/receber
   profile: { name: 'Visitante', email: '', avatar: null, joined: Date.now() }
 };
 
