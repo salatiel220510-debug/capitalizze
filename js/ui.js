@@ -4,17 +4,42 @@ export function formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'curren
 export function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
 export function renderAll() {
+  renderCategories(); // NOVO
   renderSummary();
   renderTransactions();
   renderCharts();
   renderGoals();
   renderBudgets();
   renderBills();
+  renderRecurring(); // NOVO
   renderDebts();
   renderProfile();
   renderBanksSettings();
   updateBankSelects();
   updateMonthFilter();
+}
+
+export function renderCategories() {
+  const catSelect = document.getElementById('category');
+  const budSelect = document.getElementById('budget-category');
+  const recSelect = document.getElementById('rec-category');
+  const catList = document.getElementById('categories-list');
+
+  const options = state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  const currentCat = catSelect.value;
+  catSelect.innerHTML = options;
+  if (state.categories.includes(currentCat)) catSelect.value = currentCat;
+  
+  budSelect.innerHTML = options;
+  recSelect.innerHTML = options;
+
+  catList.innerHTML = state.categories.map(c => `
+    <div class="tx">
+      <div class="tx-desc">${escapeHtml(c)}</div>
+      <button class="tx-del" data-action="del-cat" data-cat="${c}" title="Excluir">✕</button>
+    </div>
+  `).join('');
 }
 
 export function renderSummary() {
@@ -179,7 +204,7 @@ export function renderBudgets() {
 
 export function renderBills() {
   const billsList = document.getElementById('bills-list');
-  if (state.bills.length === 0) { billsList.innerHTML = '<div class="empty">Nenhuma conta cadastrada no momento.</div>'; return; }
+  if (state.bills.length === 0) { billsList.innerHTML = '<div class="empty">Nenhuma conta cadastrada.</div>'; return; }
   const sortedBills = [...state.bills].sort((a, b) => a.dueDay - b.dueDay);
   billsList.innerHTML = sortedBills.map(b => {
     const isPay = b.type === 'pay';
@@ -191,20 +216,27 @@ export function renderBills() {
   }).join('');
 }
 
+export function renderRecurring() {
+  const list = document.getElementById('recurring-list');
+  if (state.recurring.length === 0) { list.innerHTML = '<div class="empty">Nenhum lançamento fixo cadastrado.</div>'; return; }
+  const sorted = [...state.recurring].sort((a, b) => a.day - b.day);
+  list.innerHTML = sorted.map(r => {
+    const isInc = r.type === 'income';
+    const color = isInc ? 'var(--success)' : 'var(--danger)';
+    const sign = isInc ? '+' : '-';
+    return `<div class="tx"><div class="tx-info"><div class="tx-desc">${escapeHtml(r.desc)}</div><div class="tx-meta">Todo dia ${r.day} • ${r.category}</div></div><div class="tx-amount" style="color: ${color}">${sign} ${formatBRL(r.amount)}</div><button class="tx-del" data-action="del-rec" data-id="${r.id}" title="Excluir">✕</button></div>`;
+  }).join('');
+}
+
 export function renderDebts() {
   const debtsList = document.getElementById('debts-list');
-  if (state.debts.length === 0) { 
-    debtsList.innerHTML = '<div class="empty">Nenhuma dívida cadastrada.</div>'; 
-    return; 
-  }
-
+  if (state.debts.length === 0) { debtsList.innerHTML = '<div class="empty">Nenhuma dívida cadastrada.</div>'; return; }
   debtsList.innerHTML = state.debts.map(d => {
     const isOwe = d.type === 'owe';
     const color = isOwe ? 'var(--danger)' : 'var(--success)';
     const label = isOwe ? 'Abater (Pagar)' : 'Abater (Receber)';
     const btnClass = isOwe ? 'pay' : 'receive';
     const personText = d.person ? `• ${d.person}` : '';
-    
     const paid = d.total - d.remaining;
     const percent = Math.min((paid / d.total) * 100, 100);
     const isSettled = d.remaining <= 0.01;
@@ -212,17 +244,10 @@ export function renderDebts() {
     return `
       <div class="debt-item" style="flex-direction: column; align-items: stretch;">
         <div class="goal-header" style="margin-bottom: 12px;">
-          <div>
-            <div class="goal-title">${escapeHtml(d.desc)}</div>
-            <div class="tx-meta">${isOwe ? 'Eu devo' : 'Me devem'} ${personText}</div>
-          </div>
+          <div><div class="goal-title">${escapeHtml(d.desc)}</div><div class="tx-meta">${isOwe ? 'Eu devo' : 'Me devem'} ${personText}</div></div>
           <div class="tx-amount" style="color: ${color};">Falta: ${formatBRL(d.remaining > 0 ? d.remaining : 0)}</div>
         </div>
-        
-        <div class="progress-wrapper" style="margin-bottom: 16px;">
-          <div class="progress-bar ${isSettled ? 'safe' : (isOwe ? 'danger' : 'safe')}" style="width: ${percent}%"></div>
-        </div>
-        
+        <div class="progress-wrapper" style="margin-bottom: 16px;"><div class="progress-bar ${isSettled ? 'safe' : (isOwe ? 'danger' : 'safe')}" style="width: ${percent}%"></div></div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div class="tx-meta">Pago: ${formatBRL(paid)} de ${formatBRL(d.total)}</div>
           <div class="goal-actions">
@@ -247,18 +272,14 @@ export function renderProfile() {
   const placeholder = document.getElementById('profile-avatar-placeholder');
   
   if (state.profile.avatar) {
-    img.src = state.profile.avatar;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
+    img.src = state.profile.avatar; img.style.display = 'block'; placeholder.style.display = 'none';
   } else {
-    img.style.display = 'none';
-    placeholder.style.display = 'block';
+    img.style.display = 'none'; placeholder.style.display = 'block';
   }
 }
 
 export function renderBanksSettings() {
   const banksCheckboxes = document.getElementById('banks-checkboxes');
-  
   banksCheckboxes.innerHTML = AVAILABLE_BANKS.map(bank => `
     <label class="bank-checkbox">
       <input type="checkbox" value="${bank}" ${state.banks.includes(bank) ? 'checked' : ''}>

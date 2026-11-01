@@ -1,4 +1,4 @@
-const CACHE_NAME = 'capitalizze-v1.1.3';
+const CACHE_NAME = 'capitalizze-v1.1.4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -44,19 +44,14 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Lidar com o clique na notificação
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url === '/' && 'focus' in client) {
-          return client.focus();
-        }
+        if (client.url === '/' && 'focus' in client) return client.focus();
       }
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
+      if (clients.openWindow) return clients.openWindow('/');
     })
   );
 });

@@ -12,17 +12,14 @@
 </head>
 <body>
 
-  <!-- TELA DE SETUP (Usuário Novo) -->
   <div id="setup-screen" class="lock-screen" style="display: none;">
     <div class="lock-content" style="max-width: 450px;">
       <img src="assets/logo.png" alt="Capitalizze" style="width: 80px; margin-bottom: 15px;">
       <h2>Bem-vindo ao Capitalizze</h2>
       <p>Vamos configurar seu acesso e seus bancos iniciais.</p>
-      
       <div style="text-align: left; margin-bottom: 20px;">
         <label style="font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; display: block;">Crie um PIN (4 a 6 dígitos)</label>
         <input type="password" id="new-pin-input" maxlength="6" inputmode="numeric" placeholder="••••" style="text-align:center; font-size: 1.5rem; letter-spacing: 5px; width: 100%;">
-        
         <label style="font-size: 0.85rem; color: var(--muted); margin-top: 15px; margin-bottom: 5px; display: block;">Quais bancos você usa?</label>
         <div id="setup-banks-grid" class="banks-grid" style="grid-template-columns: 1fr 1fr;"></div>
       </div>
@@ -30,7 +27,6 @@
     </div>
   </div>
 
-  <!-- TELA DE BLOQUEIO (Usuário Antigo) -->
   <div id="lock-screen" class="lock-screen" style="display: none;">
     <div class="lock-content">
       <img src="assets/logo.png" alt="Capitalizze" style="width: 100px; margin-bottom: 20px;">
@@ -41,7 +37,6 @@
     </div>
   </div>
 
-  <!-- APP PRINCIPAL -->
   <div class="container">
     <header>
       <div class="header-top">
@@ -64,7 +59,6 @@
       <button class="tab-btn" data-tab="settings">Ajustes</button>
     </nav>
 
-    <!-- ABA INÍCIO -->
     <section id="tab-home" class="tab-content active">
       <section class="cards">
         <div class="card"><div class="card-label">Saldo Global</div><div class="card-value" id="balance">R$ 0,00</div></div>
@@ -82,17 +76,13 @@
         <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
         <select id="type"><option value="income">Entrada</option><option value="expense">Saída</option></select>
         <select id="category">
-          <option value="Geral">Geral</option><option value="Alimentação">Alimentação</option>
-          <option value="Transporte">Transporte</option><option value="Moradia">Moradia</option>
-          <option value="Lazer">Lazer</option><option value="Salário">Salário</option>
-          <option value="Investimento">Investimento</option><option value="Dívidas">Dívidas</option>
+          <!-- Preenchido via JS -->
         </select>
         <select id="tx-bank" style="display: none;"></select>
         <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
       </form>
     </section>
 
-    <!-- ABA TRANSAÇÕES -->
     <section id="tab-transactions" class="tab-content">
       <div class="filter-container" style="flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
         <select id="month-filter"><option value="all">Todos os meses</option></select>
@@ -106,23 +96,35 @@
       <div class="list"><div id="tx-list"></div></div>
     </section>
 
-    <!-- ABA CONTAS -->
+    <!-- ABA CONTAS (Com Lançamentos Recorrentes) -->
     <section id="tab-bills" class="tab-content">
-      <p class="sim-help">Cadastre contas fixas ou boletos para não esquecer.</p>
-      <form id="bill-form" class="form">
-        <input type="text" id="bill-desc" placeholder="Descrição (ex: Aluguel, Netflix)" required maxlength="40">
-        <input type="number" id="bill-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
-        <select id="bill-type">
-          <option value="pay">A Pagar</option>
-          <option value="receive">A Receber</option>
-        </select>
-        <input type="number" id="bill-day" placeholder="Dia Venc. (1-31)" min="1" max="31" required>
-        <button type="submit" class="btn btn-full">Cadastrar Conta</button>
-      </form>
-      <div class="list" id="bills-list"></div>
+      <div class="chart-container" style="padding: 20px;">
+        <h3>Lançamentos Recorrentes (Automáticos)</h3>
+        <p class="sim-help" style="margin-bottom: 12px; font-size: 0.85rem;">Cadastre contas fixas para serem lançadas automaticamente todo mês.</p>
+        <form id="rec-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="rec-desc" placeholder="Descrição (ex: Salário)" required maxlength="40">
+          <input type="number" id="rec-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+          <select id="rec-type"><option value="income">Entrada</option><option value="expense">Saída</option></select>
+          <select id="rec-category"></select>
+          <input type="number" id="rec-day" placeholder="Dia do mês (1-31)" min="1" max="31" required>
+          <button type="submit" class="btn btn-full">Criar Lançamento Fixo</button>
+        </form>
+        <div class="list" id="recurring-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
+      </div>
+
+      <div class="chart-container" style="padding: 20px;">
+        <h3>Contas a Pagar / Receber (Manuais)</h3>
+        <form id="bill-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="bill-desc" placeholder="Descrição (ex: Aluguel)" required maxlength="40">
+          <input type="number" id="bill-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+          <select id="bill-type"><option value="pay">A Pagar</option><option value="receive">A Receber</option></select>
+          <input type="number" id="bill-day" placeholder="Dia Venc. (1-31)" min="1" max="31" required>
+          <button type="submit" class="btn btn-full">Cadastrar Conta</button>
+        </form>
+        <div class="list" id="bills-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
+      </div>
     </section>
 
-    <!-- ABA DÍVIDAS -->
     <section id="tab-debts" class="tab-content">
       <p class="sim-help">Gerencie o que você deve ou o que devem para você.</p>
       <form id="debt-form" class="form">
@@ -138,7 +140,6 @@
       <div class="list" id="debts-list"></div>
     </section>
 
-    <!-- ABA METAS -->
     <section id="tab-goals" class="tab-content">
       <form id="goal-form" class="form">
         <input type="text" id="goal-name" placeholder="Nome da meta (ex: Notebook novo)" required maxlength="40">
@@ -148,22 +149,16 @@
       <div class="list" id="goals-list"></div>
     </section>
 
-    <!-- ABA ORÇAMENTOS -->
     <section id="tab-budgets" class="tab-content">
       <p class="sim-help">Defina limites mensais de gastos para cada categoria.</p>
       <form id="budget-form" class="form">
-        <select id="budget-category">
-          <option value="Alimentação">Alimentação</option><option value="Transporte">Transporte</option>
-          <option value="Moradia">Moradia</option><option value="Lazer">Lazer</option>
-          <option value="Geral">Geral</option>
-        </select>
+        <select id="budget-category"></select>
         <input type="number" id="budget-amount" placeholder="Limite (R$)" step="0.01" min="1" required>
         <button type="submit" class="btn btn-full">Definir Orçamento</button>
       </form>
       <div class="list" id="budgets-list"></div>
     </section>
 
-    <!-- ABA SIMULADOR -->
     <section id="tab-simulator" class="tab-content">
       <p class="sim-help">Preencha os campos para ver o poder dos juros compostos.</p>
       <div class="form sim-form">
@@ -180,7 +175,6 @@
       <div class="chart-container"><h3>Proporção: Investido vs Juros</h3><div id="sim-chart-bars" class="chart-bars"></div></div>
     </section>
 
-    <!-- ABA RESERVA -->
     <section id="tab-reserve" class="tab-content">
       <p class="sim-help">Descubra quanto você precisa guardar para viver tranquilo sem depender de salário.</p>
       <div class="form sim-form">
@@ -193,7 +187,6 @@
       </div>
     </section>
 
-    <!-- ABA CALCULADORA -->
     <section id="tab-calculator" class="tab-content">
       <div class="chart-container" style="margin-bottom: 24px;">
         <h3>Calculadora de Taxas e Parcelamento</h3>
@@ -207,7 +200,6 @@
           <div class="card"><div class="card-label">Valor da Parcela</div><div class="card-value" id="calc-per-installment">R$ 0,00</div></div>
         </div>
       </div>
-
       <div class="chart-container">
         <h3>Calculadora de Gasto Diário</h3>
         <div class="form sim-form" style="margin-bottom: 16px; padding: 0; border: none; box-shadow: none;">
@@ -221,7 +213,6 @@
       </div>
     </section>
 
-    <!-- ABA GRÁFICOS -->
     <section id="tab-charts" class="tab-content">
       <div class="chart-container">
         <h3>Distribuição de Gastos</h3>
@@ -233,7 +224,6 @@
       </div>
     </section>
 
-    <!-- ABA AJUSTES -->
     <section id="tab-settings" class="tab-content">
       <div class="chart-container">
         <h3>Perfil do Usuário</h3>
@@ -248,16 +238,22 @@
             <p style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="profile-display-date">Membro desde: Hoje</p>
           </div>
         </div>
-        
         <form id="profile-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 0;">
           <div class="input-group"><label>Nome</label><input type="text" id="prof-name" placeholder="Seu nome" maxlength="30"></div>
           <div class="input-group"><label>E-mail</label><input type="email" id="prof-email" placeholder="seu@email.com"></div>
-          <div class="input-group" style="grid-column: 1 / -1;">
-            <label>Foto de Perfil</label>
-            <input type="file" id="prof-avatar-input" accept="image/*">
-          </div>
+          <div class="input-group" style="grid-column: 1 / -1;"><label>Foto de Perfil</label><input type="file" id="prof-avatar-input" accept="image/*"></div>
           <button type="submit" class="btn btn-full">Salvar Perfil</button>
         </form>
+      </div>
+
+      <!-- GESTÃO DE CATEGORIAS -->
+      <div class="chart-container">
+        <h3>Minhas Categorias</h3>
+        <form id="category-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="new-category-name" placeholder="Nova Categoria (ex: Pets)" required maxlength="20">
+          <button type="submit" class="btn btn-full">Adicionar Categoria</button>
+        </form>
+        <div class="list" id="categories-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
       </div>
 
       <div class="chart-container">
@@ -268,7 +264,6 @@
         </div>
       </div>
 
-      <!-- NOTIFICAÇÕES -->
       <div class="chart-container">
         <h3>Notificações</h3>
         <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -287,7 +282,6 @@
 
       <div class="chart-container">
         <h3>Meus Bancos</h3>
-        <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 16px;">Selecione os bancos que você usa.</p>
         <div id="banks-checkboxes" class="banks-grid"></div>
       </div>
 
@@ -303,12 +297,12 @@
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.1.3</p>
+      <p>Capitalizze &copy; 2026 - v1.1.4</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
 
-  <!-- MODAL DE METAS -->
+  <!-- MODAIS -->
   <div id="goal-modal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="modal-goal-title">Adicionar valor</h3>
@@ -321,7 +315,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE ALTERAR PIN -->
   <div id="change-pin-modal" class="modal-overlay">
     <div class="modal-content">
       <h3>Alterar PIN de Acesso</h3>
@@ -335,7 +328,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE ABATER DÍVIDA -->
   <div id="debt-payment-modal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="modal-debt-title">Abater Dívida</h3>

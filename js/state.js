@@ -5,6 +5,8 @@ export let state = {
   banks: [],
   bills: [],
   debts: [],
+  recurring: [], // NOVO
+  categories: ['Geral', 'Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Salário', 'Investimento', 'Dívidas'], // NOVO
   profile: { name: 'Visitante', email: '', avatar: null, joined: Date.now() }
 };
 
