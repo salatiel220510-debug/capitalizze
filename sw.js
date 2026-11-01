@@ -1,9 +1,12 @@
-const CACHE_NAME = 'capitalizze-v1.0.8';
+const CACHE_NAME = 'capitalizze-v1.1.0';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/css/style.css',
   '/js/main.js',
+  '/js/state.js',
+  '/js/ui.js',
+  '/js/events.js',
   '/js/crypto.js',
   '/js/storage.js',
   '/assets/logo.png',
@@ -12,8 +15,24 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); 
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
   );
 });
 

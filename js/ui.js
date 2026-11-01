@@ -1,10 +1,8 @@
-// js/ui.js
-import { state } from './state.js';
+import { state, AVAILABLE_BANKS } from './state.js';
 
 export function formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 export function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-// Função principal que atualiza tudo de uma vez
 export function renderAll() {
   renderSummary();
   renderTransactions();
@@ -25,7 +23,6 @@ export function renderSummary() {
   document.getElementById('income').textContent = formatBRL(inc);
   document.getElementById('expense').textContent = formatBRL(exp);
 
-  // Renderiza os cards separados por banco
   const bankSummaryContainer = document.getElementById('bank-summary-container');
   const bankCardsContainer = document.getElementById('bank-cards');
 
@@ -53,16 +50,26 @@ export function renderSummary() {
 
 export function renderTransactions() {
   const listEl = document.getElementById('tx-list');
-  const filter = document.getElementById('month-filter').value;
+  const filterMonth = document.getElementById('month-filter').value;
+  const filterType = document.getElementById('filter-type').value;
+  const searchTerm = document.getElementById('search-tx').value.toLowerCase();
   
   const filtered = state.transactions.filter(t => {
-    if (filter === 'all') return true;
-    const d = new Date(t.createdAt);
-    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` === filter;
+    if (filterMonth !== 'all') {
+      const d = new Date(t.createdAt);
+      if (`${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` !== filterMonth) return false;
+    }
+    if (filterType !== 'all' && t.type !== filterType) return false;
+    if (searchTerm) {
+      const matchDesc = t.desc.toLowerCase().includes(searchTerm);
+      const matchCat = t.category.toLowerCase().includes(searchTerm);
+      if (!matchDesc && !matchCat) return false;
+    }
+    return true;
   });
 
   if (filtered.length === 0) { 
-    listEl.innerHTML = '<div class="empty">Nenhuma transação encontrada.</div>'; 
+    listEl.innerHTML = '<div class="empty">Nenhuma transação encontrada com esses filtros.</div>'; 
     return; 
   }
 
@@ -191,7 +198,6 @@ export function renderProfile() {
 
 export function renderBanksSettings() {
   const banksCheckboxes = document.getElementById('banks-checkboxes');
-  const AVAILABLE_BANKS = ['Nubank', 'Inter', 'Itaú', 'Bradesco', 'Caixa', 'Santander', 'C6 Bank', 'PicPay', 'Mercado Pago'];
   
   banksCheckboxes.innerHTML = AVAILABLE_BANKS.map(bank => `
     <label class="bank-checkbox">

@@ -1,7 +1,6 @@
-// js/storage.js
 import { encryptData, decryptData } from './crypto.js';
 
-let masterKey = null; // A chave fica só na memória, não vai pro localStorage
+let masterKey = null;
 
 export function setMasterKey(key) { masterKey = key; }
 export function hasMasterKey() { return masterKey !== null; }
@@ -20,7 +19,6 @@ export async function loadData(key, fallback) {
   return decrypted !== null ? decrypted : fallback;
 }
 
-// Função apenas para checar se existe algum dado salvo (para saber se é o primeiro acesso)
 export function hasSavedData() {
   return localStorage.getItem('capitalizze.transactions') !== null;
 }

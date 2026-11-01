@@ -1,11 +1,10 @@
-// js/events.js
 import { state } from './state.js';
-import { saveData } from './storage.js';
-import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, formatBRL } from './ui.js';
+import { saveData, loadData, setMasterKey } from './storage.js';
+import { deriveKey } from './crypto.js';
+import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, formatBRL } from './ui.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-// Variáveis de controle do Modal
 let currentGoalId = null;
 const goalModal = document.getElementById('goal-modal');
 
@@ -68,22 +67,20 @@ export function initEvents() {
 
     state.transactions.splice(index, 1); 
     await saveData('capitalizze.transactions', state.transactions);
-    renderSummary(); updateMonthFilter();
+    renderSummary(); updateMonthFilter(); renderTransactions();
     
     showToast('Transação excluída.', 'danger', 'Desfazer', async () => {
       state.transactions.splice(index, 0, removedTx); 
       await saveData('capitalizze.transactions', state.transactions);
-      renderSummary(); updateMonthFilter(); 
+      renderSummary(); updateMonthFilter(); renderTransactions();
       showToast('Exclusão desfeita.');
     });
   });
 
-  // Filtro de mês
-  document.getElementById('month-filter').addEventListener('change', () => {
-    const listEl = document.getElementById('tx-list');
-    const filter = document.getElementById('month-filter').value;
-    import('./ui.js').then(ui => ui.renderTransactions());
-  });
+  // Filtros de Mês, Tipo e Busca
+  document.getElementById('month-filter').addEventListener('change', renderTransactions);
+  document.getElementById('filter-type').addEventListener('change', renderTransactions);
+  document.getElementById('search-tx').addEventListener('input', renderTransactions);
 
   // 4. Metas
   document.getElementById('goal-form').addEventListener('submit', async (e) => {
@@ -203,7 +200,61 @@ export function initEvents() {
     }
   });
 
-  // 7. Calculadoras
+  // 7. Segurança - Alterar PIN
+  const changePinModal = document.getElementById('change-pin-modal');
+  
+  document.getElementById('btn-change-pin').addEventListener('click', () => {
+    document.getElementById('old-pin').value = '';
+    document.getElementById('new-pin').value = '';
+    changePinModal.classList.add('active');
+    setTimeout(() => document.getElementById('old-pin').focus(), 100);
+  });
+
+  document.getElementById('cancel-change-pin').addEventListener('click', () => {
+    changePinModal.classList.remove('active');
+  });
+
+  document.getElementById('confirm-change-pin').addEventListener('click', async () => {
+    const oldPin = document.getElementById('old-pin').value;
+    const newPin = document.getElementById('new-pin').value;
+
+    if (oldPin.length < 4 || oldPin.length > 6 || newPin.length < 4 || newPin.length > 6) {
+      showToast('Pins devem ter entre 4 e 6 dígitos.', 'danger'); return;
+    }
+
+    const oldKey = await deriveKey(oldPin);
+    setMasterKey(oldKey);
+    
+    const testData = await loadData('capitalizze.transactions', null);
+    if (testData === null) {
+      showToast('PIN atual incorreto.', 'danger'); 
+      return;
+    }
+
+    const newKey = await deriveKey(newPin);
+    setMasterKey(newKey);
+
+    await saveData('capitalizze.transactions', state.transactions);
+    await saveData('capitalizze.goals', state.goals);
+    await saveData('capitalizze.budgets', state.budgets);
+    await saveData('capitalizze.banks', state.banks);
+    await saveData('capitalizze.profile', state.profile);
+
+    changePinModal.classList.remove('active');
+    showToast('PIN alterado com sucesso!', 'success');
+  });
+
+  // Segurança - Apagar Tudo
+  document.getElementById('btn-wipe-data').addEventListener('click', () => {
+    const confirm = window.confirm("🚨 ATENÇÃO! Isso vai apagar TODAS as suas transações, metas e configurações PERMANENTEMENTE. Como os dados são criptografados, não há como recuperá-los. Tem certeza?");
+    
+    if (confirm) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  });
+
+  // 8. Calculadoras
   const simInputs = ['sim-initial', 'sim-monthly', 'sim-rate', 'sim-time'].map(id => document.getElementById(id));
   const calcSim = () => {
     const i = parseFloat(simInputs[0].value) || 0, m = parseFloat(simInputs[1].value) || 0, r = (parseFloat(simInputs[2].value) || 0)/100, t = parseInt(simInputs[3].value) || 0;
@@ -239,7 +290,7 @@ export function initEvents() {
   };
   [dailyInc, dailyFix].forEach(el => el.addEventListener('input', calcDaily));
 
-  // 8. Backup
+  // 9. Backup
   document.getElementById('btn-export').addEventListener('click', () => {
     const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, profile: state.profile };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -268,7 +319,6 @@ export function initEvents() {
   });
 }
 
-// Função global de Toast
 export function showToast(message, type = 'success', actionText = null, actionCallback = null) {
   const toastContainer = document.getElementById('toast-container');
   const toast = document.createElement('div');

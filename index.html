@@ -5,12 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Capitalizze — O poder do seu dinheiro</title>
   
-  <!-- CSS na pasta correta -->
   <link rel="stylesheet" href="css/style.css">
-  
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#090d16">
-  <!-- Ícone corrigido para a pasta assets -->
   <link rel="icon" type="image/png" href="assets/logo.png">
 </head>
 <body>
@@ -91,18 +88,21 @@
           <option value="Lazer">Lazer</option><option value="Salário">Salário</option>
           <option value="Investimento">Investimento</option>
         </select>
-        <select id="tx-bank" style="display: none;">
-          <option value="Geral">Geral (Sem banco)</option>
-        </select>
+        <select id="tx-bank" style="display: none;"></select>
         <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
       </form>
     </section>
 
     <!-- ABA TRANSAÇÕES -->
     <section id="tab-transactions" class="tab-content">
-      <div class="filter-container">
-        <label for="month-filter">Filtrar por mês:</label>
+      <div class="filter-container" style="flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
         <select id="month-filter"><option value="all">Todos os meses</option></select>
+        <select id="filter-type">
+          <option value="all">Todos os tipos</option>
+          <option value="income">Apenas Entradas</option>
+          <option value="expense">Apenas Saídas</option>
+        </select>
+        <input type="text" id="search-tx" placeholder="Buscar por descrição ou categoria..." style="flex: 1; min-width: 200px;">
       </div>
       <div class="list"><div id="tx-list"></div></div>
     </section>
@@ -238,6 +238,14 @@
       </div>
 
       <div class="chart-container">
+        <h3>Segurança</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button id="btn-change-pin" class="btn btn-outline">🔑 Alterar PIN</button>
+          <button id="btn-wipe-data" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">🚨 Apagar Todos os Dados</button>
+        </div>
+      </div>
+
+      <div class="chart-container">
         <h3>Meus Bancos</h3>
         <p style="font-size: 0.9rem; color: var(--muted); margin-bottom: 16px;">Selecione os bancos que você usa.</p>
         <div id="banks-checkboxes" class="banks-grid"></div>
@@ -254,7 +262,7 @@
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.0.8</p>
+      <p>Capitalizze &copy; 2026 - v1.1.0</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
@@ -272,10 +280,23 @@
     </div>
   </div>
 
+  <!-- MODAL DE ALTERAR PIN -->
+  <div id="change-pin-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Alterar PIN de Acesso</h3>
+      <p class="modal-desc">Isso vai re-criptografar todos os seus dados com a nova senha.</p>
+      <input type="password" id="old-pin" placeholder="PIN Atual (4 a 6 dígitos)" maxlength="6" style="margin-bottom: 12px;">
+      <input type="password" id="new-pin" placeholder="Novo PIN (4 a 6 dígitos)" maxlength="6">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="cancel-change-pin">Cancelar</button>
+        <button class="btn" id="confirm-change-pin">Salvar Novo PIN</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CONTAINER DE TOASTS -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- O ÚNICO SCRIPT QUE O HTML CONHECE AGORA É O MAIN.JS -->
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

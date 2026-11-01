@@ -1,4 +1,3 @@
-// js/state.js
 export let state = {
   transactions: [],
   goals: [],
