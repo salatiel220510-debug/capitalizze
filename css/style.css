@@ -40,6 +40,15 @@ header { margin-bottom: 24px; text-align: center; display: flex; flex-direction:
 .badge { background: var(--danger); color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; margin-left: 4px; }
 .btn-notify-active { background: var(--success) !important; color: white !important; border-color: var(--success) !important; }
 
+/* GAMIFICAÇÃO - CONQUISTAS */
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 16px; }
+.achievement { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: transform 0.2s; filter: grayscale(100%); opacity: 0.5; }
+.achievement.unlocked { filter: grayscale(0%); opacity: 1; border-color: var(--warning); box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+.achievement:hover { transform: translateY(-3px); }
+.achievement-icon { font-size: 2.5rem; }
+.achievement-title { font-size: 0.85rem; font-weight: 600; }
+.achievement-desc { font-size: 0.7rem; color: var(--muted); }
+
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); position: relative; overflow: hidden; }
 .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); }

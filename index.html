@@ -75,9 +75,7 @@
         <input type="text" id="desc" placeholder="Descrição (ex: Salário)" required maxlength="60">
         <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
         <select id="type"><option value="income">Entrada</option><option value="expense">Saída</option></select>
-        <select id="category">
-          <!-- Preenchido via JS -->
-        </select>
+        <select id="category"></select>
         <select id="tx-bank" style="display: none;"></select>
         <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
       </form>
@@ -96,7 +94,6 @@
       <div class="list"><div id="tx-list"></div></div>
     </section>
 
-    <!-- ABA CONTAS (Com Lançamentos Recorrentes) -->
     <section id="tab-bills" class="tab-content">
       <div class="chart-container" style="padding: 20px;">
         <h3>Lançamentos Recorrentes (Automáticos)</h3>
@@ -246,7 +243,12 @@
         </form>
       </div>
 
-      <!-- GESTÃO DE CATEGORIAS -->
+      <!-- CONQUISTAS (GAMIFICAÇÃO) -->
+      <div class="chart-container">
+        <h3>Suas Conquistas</h3>
+        <div id="achievements-grid" class="badge-grid"></div>
+      </div>
+
       <div class="chart-container">
         <h3>Minhas Categorias</h3>
         <form id="category-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
@@ -257,18 +259,16 @@
       </div>
 
       <div class="chart-container">
-        <h3>Aparência</h3>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span>Modo Escuro / Claro</span>
-          <button id="theme-toggle-settings" class="btn btn-outline" style="padding: 8px 16px;">🌓 Alternar</button>
-        </div>
-      </div>
-
-      <div class="chart-container">
-        <h3>Notificações</h3>
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span>Avisar sobre contas a vencer</span>
-          <button id="btn-enable-notifications" class="btn btn-outline" style="padding: 8px 16px;">🔔 Ativar</button>
+        <h3>Aparência e Segurança</h3>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Modo Escuro / Claro</span>
+            <button id="theme-toggle-settings" class="btn btn-outline" style="padding: 8px 16px;">🌓 Alternar</button>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Notificações de Contas</span>
+            <button id="btn-enable-notifications" class="btn btn-outline" style="padding: 8px 16px;">🔔 Ativar</button>
+          </div>
         </div>
       </div>
 
@@ -297,12 +297,11 @@
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.1.4</p>
+      <p>Capitalizze &copy; 2026 - v1.2.0</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
 
-  <!-- MODAIS -->
   <div id="goal-modal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="modal-goal-title">Adicionar valor</h3>

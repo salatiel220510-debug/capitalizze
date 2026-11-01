@@ -1,22 +1,37 @@
-import { state, AVAILABLE_BANKS } from './state.js';
+import { state, AVAILABLE_BANKS, ACHIEVEMENTS_LIST } from './state.js';
 
 export function formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 export function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
 export function renderAll() {
-  renderCategories(); // NOVO
+  renderCategories();
   renderSummary();
   renderTransactions();
   renderCharts();
   renderGoals();
   renderBudgets();
   renderBills();
-  renderRecurring(); // NOVO
+  renderRecurring();
   renderDebts();
+  renderAchievements(); // NOVO
   renderProfile();
   renderBanksSettings();
   updateBankSelects();
   updateMonthFilter();
+}
+
+export function renderAchievements() {
+  const grid = document.getElementById('achievements-grid');
+  grid.innerHTML = ACHIEVEMENTS_LIST.map(ach => {
+    const isUnlocked = state.achievements.includes(ach.id);
+    return `
+      <div class="achievement ${isUnlocked ? 'unlocked' : ''}" title="${ach.desc}">
+        <div class="achievement-icon">${ach.icon}</div>
+        <div class="achievement-title">${ach.title}</div>
+        <div class="achievement-desc">${ach.desc}</div>
+      </div>
+    `;
+  }).join('');
 }
 
 export function renderCategories() {

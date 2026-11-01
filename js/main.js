@@ -2,7 +2,7 @@ import { deriveKey } from './crypto.js';
 import { setMasterKey, hasSavedData, loadData, saveData } from './storage.js';
 import { state, AVAILABLE_BANKS } from './state.js';
 import { renderAll } from './ui.js';
-import { initEvents } from './events.js';
+import { initEvents, checkAchievements, showToast } from './events.js';
 
 const setupScreen = document.getElementById('setup-screen');
 const newPinInput = document.getElementById('new-pin-input');
@@ -54,6 +54,7 @@ setupSubmit.addEventListener('click', async () => {
     await saveData('capitalizze.profile', state.profile);
     await saveData('capitalizze.transactions', state.transactions);
     await saveData('capitalizze.categories', state.categories);
+    await saveData('capitalizze.achievements', state.achievements);
     unlockApp();
   } catch (error) {
     console.error(error);
@@ -80,8 +81,9 @@ async function handlePin() {
       state.banks = await loadData('capitalizze.banks', []);
       state.bills = await loadData('capitalizze.bills', []);
       state.debts = await loadData('capitalizze.debts', []);
-      state.recurring = await loadData('capitalizze.recurring', []); // Carrega os Fixos
-      state.categories = await loadData('capitalizze.categories', state.categories); // Carrega Categorias
+      state.recurring = await loadData('capitalizze.recurring', []);
+      state.categories = await loadData('capitalizze.categories', state.categories);
+      state.achievements = await loadData('capitalizze.achievements', []); // Carrega Conquistas
       unlockApp();
     } else {
       setMasterKey(null);
@@ -108,13 +110,13 @@ function unlockApp() {
 
   if (localStorage.getItem('capitalizze.theme') === 'light') document.body.classList.add('light-mode');
 
-  processRecurringTransactions(); // NOVO: Roda os automáticos
+  processRecurringTransactions();
+  checkAchievements(); // Verifica conquistas ao abrir
   renderAll();
   initEvents();
   checkDueBills(); 
 }
 
-// NOVO: Processa os lançamentos recorrentes
 async function processRecurringTransactions() {
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -125,11 +127,8 @@ async function processRecurringTransactions() {
     if (today >= rec.day && rec.lastProcessed !== currentMonth) {
       state.transactions.push({
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-        desc: rec.desc + ' (Automático)',
-        amount: rec.amount,
-        type: rec.type,
-        category: rec.category,
-        bank: state.banks.length > 0 ? state.banks[0] : 'Geral',
+        desc: rec.desc + ' (Automático)', amount: rec.amount, type: rec.type,
+        category: rec.category, bank: state.banks.length > 0 ? state.banks[0] : 'Geral',
         createdAt: Date.now()
       });
       rec.lastProcessed = currentMonth;
@@ -165,7 +164,6 @@ function checkDueBills() {
 
 initSecurityFlow();
 
-// Service Worker COM NOTIFICAÇÃO DE ATUALIZAÇÃO
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
@@ -175,17 +173,13 @@ if ('serviceWorker' in navigator) {
         const newWorker = registration.installing;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // NOVO: Quando uma atualização é detectada
             if (Notification.permission === 'granted') {
               const notif = new Notification('Capitalizze Atualizado 🚀', {
-                body: 'Uma nova versão está disponível. Clique aqui para recarregar o app!',
-                icon: '/assets/logo.png'
+                body: 'Uma nova versão está disponível. Clique aqui para recarregar o app!', icon: '/assets/logo.png'
               });
               notif.onclick = () => window.location.reload();
             } else {
-              if(confirm('Nova versão disponível! Deseja recarregar agora?')) {
-                window.location.reload();
-              }
+              if(confirm('Nova versão disponível! Deseja recarregar agora?')) window.location.reload();
             }
           }
         });
@@ -193,6 +187,3 @@ if ('serviceWorker' in navigator) {
     }).catch(err => console.log('Erro no SW:', err));
   });
 }
-
-// Importa o showToast para usar na função processRecurringTransactions
-import { showToast } from './events.js';

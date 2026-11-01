@@ -1,7 +1,7 @@
-import { state } from './state.js';
+import { state, ACHIEVEMENTS_LIST } from './state.js';
 import { saveData, loadData, setMasterKey } from './storage.js';
 import { deriveKey } from './crypto.js';
-import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, renderBills, renderDebts, renderCategories, renderRecurring, formatBRL } from './ui.js';
+import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, renderBills, renderDebts, renderCategories, renderRecurring, renderAchievements, formatBRL } from './ui.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -10,7 +10,23 @@ let currentDebtId = null;
 const goalModal = document.getElementById('goal-modal');
 const debtPaymentModal = document.getElementById('debt-payment-modal');
 
+// VARIÁVEIS DE AUTOBLOQUEIO
+let inactivityTimer;
+const LOCK_TIMEOUT = 120000; // 2 minutos (120.000 ms)
+
 export function initEvents() {
+  // Inicia o timer de inatividade
+  resetInactivityTimer();
+  ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      // Se trocar de aba, bloqueia após 1 minuto
+      setTimeout(() => { if(document.visibilityState === 'hidden') lockApp(); }, 60000);
+    }
+  });
+
   // 1. Navegação de Abas
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -51,6 +67,7 @@ export function initEvents() {
     });
     
     await saveData('capitalizze.transactions', state.transactions);
+    checkAchievements();
     renderSummary(); updateMonthFilter();
     document.getElementById('tx-form').reset(); 
     submitBtn.textContent = 'Adicionar Entrada'; submitBtn.classList.remove('danger');
@@ -82,7 +99,7 @@ export function initEvents() {
   document.getElementById('filter-type').addEventListener('change', renderTransactions);
   document.getElementById('search-tx').addEventListener('input', renderTransactions);
 
-  // 4. Categorias (NOVO)
+  // 4. Categorias
   document.getElementById('category-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newCat = document.getElementById('new-category-name').value.trim();
@@ -90,9 +107,7 @@ export function initEvents() {
     
     state.categories.push(newCat);
     await saveData('capitalizze.categories', state.categories);
-    renderCategories();
-    document.getElementById('category-form').reset();
-    showToast('Categoria criada!');
+    renderCategories(); document.getElementById('category-form').reset(); showToast('Categoria criada!');
   });
 
   document.getElementById('categories-list').addEventListener('click', async (e) => {
@@ -100,11 +115,10 @@ export function initEvents() {
     const cat = btn.dataset.cat;
     state.categories = state.categories.filter(c => c !== cat);
     await saveData('capitalizze.categories', state.categories);
-    renderCategories();
-    showToast('Categoria removida.', 'danger');
+    renderCategories(); showToast('Categoria removida.', 'danger');
   });
 
-  // 5. Lançamentos Recorrentes (NOVO)
+  // 5. Lançamentos Recorrentes
   document.getElementById('rec-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const desc = document.getElementById('rec-desc').value.trim();
@@ -112,22 +126,17 @@ export function initEvents() {
     const type = document.getElementById('rec-type').value;
     const category = document.getElementById('rec-category').value;
     const day = parseInt(document.getElementById('rec-day').value);
-
     if (!desc || !amount || amount <= 0 || !day) return;
-
     state.recurring.push({ id: uid(), desc, amount, type, category, day, lastProcessed: "" });
     await saveData('capitalizze.recurring', state.recurring);
-    renderRecurring();
-    document.getElementById('rec-form').reset();
-    showToast('Lançamento fixo cadastrado!');
+    renderRecurring(); document.getElementById('rec-form').reset(); showToast('Lançamento fixo cadastrado!');
   });
 
   document.getElementById('recurring-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-action="del-rec"]'); if (!btn) return;
     state.recurring = state.recurring.filter(r => r.id !== btn.dataset.id);
     await saveData('capitalizze.recurring', state.recurring);
-    renderRecurring();
-    showToast('Lançamento fixo removido.', 'danger');
+    renderRecurring(); showToast('Lançamento fixo removido.', 'danger');
   });
 
   // 6. Contas Manuais
@@ -146,18 +155,15 @@ export function initEvents() {
   document.getElementById('bills-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
     const id = btn.dataset.id; const action = btn.dataset.action;
-
     if (action === 'del-bill') {
       state.bills = state.bills.filter(b => b.id !== id);
-      await saveData('capitalizze.bills', state.bills);
-      renderBills(); showToast('Conta removida.', 'danger');
+      await saveData('capitalizze.bills', state.bills); renderBills(); showToast('Conta removida.', 'danger');
     } else if (action === 'settle-bill') {
       const bill = state.bills.find(b => b.id === id); if (!bill) return;
       const txType = bill.type === 'pay' ? 'expense' : 'income';
       state.transactions.push({ id: uid(), desc: bill.desc, amount: bill.amount, type: txType, category: 'Geral', bank: state.banks.length > 0 ? state.banks[0] : 'Geral', createdAt: Date.now() });
       state.bills = state.bills.filter(b => b.id !== id);
-      await saveData('capitalizze.transactions', state.transactions);
-      await saveData('capitalizze.bills', state.bills);
+      await saveData('capitalizze.transactions', state.transactions); await saveData('capitalizze.bills', state.bills);
       renderSummary(); updateMonthFilter(); renderTransactions(); renderBills();
       document.getElementById('bills-badge').style.display = 'none';
       showToast(`Conta ${bill.type === 'pay' ? 'paga' : 'recebida'} com sucesso!`);
@@ -174,6 +180,7 @@ export function initEvents() {
     if (!desc || !amount || amount <= 0) return;
     state.debts.push({ id: uid(), desc, total: amount, remaining: amount, type, person });
     await saveData('capitalizze.debts', state.debts);
+    checkAchievements();
     renderDebts(); document.getElementById('debt-form').reset(); showToast('Dívida cadastrada!');
   });
 
@@ -182,8 +189,7 @@ export function initEvents() {
     const id = btn.dataset.id; const action = btn.dataset.action;
     if (action === 'del-debt') {
       state.debts = state.debts.filter(d => d.id !== id);
-      await saveData('capitalizze.debts', state.debts);
-      renderDebts(); showToast('Dívida removida.', 'danger');
+      await saveData('capitalizze.debts', state.debts); checkAchievements(); renderDebts(); showToast('Dívida removida.', 'danger');
     } else if (action === 'settle-debt') {
       const debt = state.debts.find(d => d.id === id); if (!debt) return;
       currentDebtId = id;
@@ -205,6 +211,7 @@ export function initEvents() {
     const txType = debt.type === 'owe' ? 'expense' : 'income';
     state.transactions.push({ id: uid(), desc: `Abatimento: ${debt.desc}`, amount: amount, type: txType, category: 'Dívidas', bank: state.banks.length > 0 ? state.banks[0] : 'Geral', createdAt: Date.now() });
     await saveData('capitalizze.debts', state.debts); await saveData('capitalizze.transactions', state.transactions);
+    checkAchievements();
     renderDebts(); renderSummary(); updateMonthFilter(); renderTransactions();
     debtPaymentModal.classList.remove('active'); currentDebtId = null;
     showToast(`Dívida abatida e ${formatBRL(amount)} adicionado às transações!`);
@@ -224,7 +231,7 @@ export function initEvents() {
     const id = btn.dataset.id; const goal = state.goals.find(g => g.id === id); if (!goal) return;
     if (btn.dataset.action === 'del-goal') {
       state.goals = state.goals.filter(g => g.id !== id); await saveData('capitalizze.goals', state.goals);
-      renderGoals(); showToast('Meta excluída.', 'danger');
+      checkAchievements(); renderGoals(); showToast('Meta excluída.', 'danger');
     } else if (btn.dataset.action === 'add-goal') {
       currentGoalId = id; document.getElementById('modal-goal-title').textContent = `Guardar em: ${goal.name}`;
       document.getElementById('modal-goal-amount').value = ''; goalModal.classList.add('active');
@@ -238,7 +245,7 @@ export function initEvents() {
     const amount = parseFloat(document.getElementById('modal-goal-amount').value.replace(',', '.'));
     if (isNaN(amount) || amount <= 0) { showToast('Valor inválido.', 'danger'); return; }
     const goal = state.goals.find(g => g.id === currentGoalId);
-    if (goal) { goal.current += amount; await saveData('capitalizze.goals', state.goals); renderGoals(); showToast('Valor guardado!'); }
+    if (goal) { goal.current += amount; await saveData('capitalizze.goals', state.goals); checkAchievements(); renderGoals(); showToast('Valor guardado!'); }
     goalModal.classList.remove('active'); currentGoalId = null;
   });
 
@@ -248,7 +255,7 @@ export function initEvents() {
     const cat = document.getElementById('budget-category').value; const amount = parseFloat(document.getElementById('budget-amount').value);
     if (!amount || amount <= 0) return;
     state.budgets[cat] = amount; await saveData('capitalizze.budgets', state.budgets);
-    renderBudgets(); document.getElementById('budget-form').reset(); showToast(`Orçamento de ${cat} definido!`);
+    checkAchievements(); renderBudgets(); document.getElementById('budget-form').reset(); showToast(`Orçamento de ${cat} definido!`);
   });
 
   document.getElementById('budgets-list').addEventListener('click', async (e) => {
@@ -257,7 +264,7 @@ export function initEvents() {
     renderBudgets(); showToast('Orçamento removido.', 'danger');
   });
 
-  // 10. Perfil, Tema, Bancos, Notificações, Segurança e Backup
+  // 10. Configurações, Perfil e Backup
   let currentAvatarBase64 = state.profile.avatar || null;
   document.getElementById('prof-avatar-input').addEventListener('change', (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -298,7 +305,7 @@ export function initEvents() {
     if (e.target.tagName === 'INPUT') {
       if (e.target.checked) { if (!state.banks.includes(e.target.value)) state.banks.push(e.target.value); }
       else { state.banks = state.banks.filter(b => b !== e.target.value); }
-      await saveData('capitalizze.banks', state.banks); updateBankSelects(); renderSummary(); 
+      await saveData('capitalizze.banks', state.banks); updateBankSelects(); renderSummary(); checkAchievements();
       showToast(`Bancos atualizados.`);
     }
   });
@@ -343,6 +350,7 @@ export function initEvents() {
     await saveData('capitalizze.budgets', state.budgets); await saveData('capitalizze.banks', state.banks);
     await saveData('capitalizze.bills', state.bills); await saveData('capitalizze.debts', state.debts);
     await saveData('capitalizze.recurring', state.recurring); await saveData('capitalizze.categories', state.categories);
+    await saveData('capitalizze.achievements', state.achievements); // Salva as conquistas na troca
     await saveData('capitalizze.profile', state.profile);
     changePinModal.classList.remove('active'); showToast('PIN alterado com sucesso!', 'success');
   });
@@ -383,7 +391,7 @@ export function initEvents() {
   [dailyInc, dailyFix].forEach(el => el.addEventListener('input', calcDaily));
 
   document.getElementById('btn-export').addEventListener('click', () => {
-    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, bills: state.bills, debts: state.debts, recurring: state.recurring, categories: state.categories, profile: state.profile };
+    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, bills: state.bills, debts: state.debts, recurring: state.recurring, categories: state.categories, achievements: state.achievements, profile: state.profile };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `capitalizze-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -404,6 +412,7 @@ export function initEvents() {
         if (data.debts) { state.debts = data.debts; await saveData('capitalizze.debts', data.debts); }
         if (data.recurring) { state.recurring = data.recurring; await saveData('capitalizze.recurring', data.recurring); }
         if (data.categories) { state.categories = data.categories; await saveData('capitalizze.categories', data.categories); }
+        if (data.achievements) { state.achievements = data.achievements; await saveData('capitalizze.achievements', data.achievements); }
         if (data.profile) { state.profile = data.profile; await saveData('capitalizze.profile', data.profile); }
         showToast('Backup restaurado! Recarregando...', 'success');
         setTimeout(() => location.reload(), 1500);
@@ -428,6 +437,47 @@ export function initEvents() {
     a.href = url; a.download = `capitalizze-extrato-${new Date().toISOString().split('T')[0]}.csv`;
     a.click(); URL.revokeObjectURL(url); showToast('Relatório Excel gerado!');
   });
+}
+
+// --- SISTEMA DE AUTOBLOQUEIO ---
+function resetInactivityTimer() {
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(lockApp, LOCK_TIMEOUT);
+}
+
+function lockApp() {
+  // Recarrega a página para limpar a memória RAM (state e masterKey) e forçar a tela de PIN
+  window.location.reload();
+}
+
+// --- SISTEMA DE CONQUISTAS ---
+export async function checkAchievements() {
+  let newAchievementUnlocked = false;
+  const unlock = (id) => {
+    if (!state.achievements.includes(id)) {
+      state.achievements.push(id);
+      newAchievementUnlocked = true;
+      const ach = ACHIEVEMENTS_LIST.find(a => a.id === id);
+      showToast(`🏆 Conquista Desbloqueada: ${ach.title}`, 'success');
+    }
+  };
+
+  // Condições
+  if (state.transactions.length > 0) unlock('first_tx');
+  if (Object.keys(state.budgets).length > 0) unlock('first_budget');
+  
+  const totalSaved = state.goals.reduce((sum, g) => sum + g.current, 0);
+  if (totalSaved >= 1000) unlock('saver_1000');
+  
+  const hasActiveDebts = state.debts.some(d => d.remaining > 0.01);
+  if (state.debts.length > 0 && !hasActiveDebts) unlock('debt_free');
+  
+  if (state.banks.length >= 3) unlock('multi_bank');
+
+  if (newAchievementUnlocked) {
+    await saveData('capitalizze.achievements', state.achievements);
+    renderAchievements();
+  }
 }
 
 export function showToast(message, type = 'success', actionText = null, actionCallback = null) {
