@@ -4,7 +4,7 @@ export let state = {
   budgets: {},
   banks: [],
   bills: [],
-  debts: [], // NOVO
+  debts: [],
   profile: { name: 'Visitante', email: '', avatar: null, joined: Date.now() }
 };
 

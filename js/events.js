@@ -128,11 +128,12 @@ export function initEvents() {
       await saveData('capitalizze.bills', state.bills);
       
       renderSummary(); updateMonthFilter(); renderTransactions(); renderBills();
+      document.getElementById('bills-badge').style.display = 'none'; // Esconde o badge
       showToast(`Conta ${bill.type === 'pay' ? 'paga' : 'recebida'} com sucesso!`);
     }
   });
 
-  // NOVO: 5. Formulário de Dívidas
+  // 5. Formulário de Dívidas
   document.getElementById('debt-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const desc = document.getElementById('debt-desc').value.trim();
@@ -149,7 +150,7 @@ export function initEvents() {
     showToast('Dívida cadastrada!');
   });
 
-  // NOVO: Ações de Dívidas (Abater/Excluir)
+  // Ações de Dívidas (Abater/Excluir)
   document.getElementById('debts-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
     const id = btn.dataset.id;
@@ -190,10 +191,8 @@ export function initEvents() {
     const debt = state.debts.find(d => d.id === currentDebtId);
     if (!debt) return;
 
-    // Abate o valor (sem deixar ficar negativo)
     debt.remaining = Math.max(0, debt.remaining - amount);
 
-    // Cria uma transação automática
     const txType = debt.type === 'owe' ? 'expense' : 'income';
     state.transactions.push({
       id: uid(),
@@ -334,6 +333,44 @@ export function initEvents() {
     }
   });
 
+  // --- NOVO: Lógica do Botão de Notificação ---
+  const btnNotify = document.getElementById('btn-enable-notifications');
+  
+  function updateNotifyButton() {
+    if (Notification.permission === 'granted') {
+      btnNotify.textContent = '🔔 Ativado';
+      btnNotify.classList.add('btn-notify-active');
+    } else if (Notification.permission === 'denied') {
+      btnNotify.textContent = '🚫 Bloqueado';
+      btnNotify.classList.remove('btn-notify-active');
+      btnNotify.style.color = 'var(--danger)';
+    } else {
+      btnNotify.textContent = '🔔 Ativar';
+      btnNotify.classList.remove('btn-notify-active');
+    }
+  }
+  
+  updateNotifyButton();
+
+  btnNotify.addEventListener('click', () => {
+    if (Notification.permission === 'granted') {
+      showToast('Notificações já estão ativas!', 'success');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      showToast('Você bloqueou as notificações. Vá nas configurações do navegador para desbloquear.', 'danger');
+      return;
+    }
+    
+    Notification.requestPermission().then(permission => {
+      updateNotifyButton();
+      if (permission === 'granted') {
+        showToast('Notificações ativadas com sucesso!', 'success');
+        new Notification('Capitalizze', { body: 'Você receberá alertas de contas a vencer!', icon: '/assets/logo.png' });
+      }
+    });
+  });
+
   // Segurança - Alterar PIN
   const changePinModal = document.getElementById('change-pin-modal');
   
@@ -373,7 +410,7 @@ export function initEvents() {
     await saveData('capitalizze.budgets', state.budgets);
     await saveData('capitalizze.banks', state.banks);
     await saveData('capitalizze.bills', state.bills);
-    await saveData('capitalizze.debts', state.debts); // Inclui as dívidas na troca
+    await saveData('capitalizze.debts', state.debts);
     await saveData('capitalizze.profile', state.profile);
 
     changePinModal.classList.remove('active');

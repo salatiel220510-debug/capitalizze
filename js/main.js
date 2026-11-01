@@ -84,7 +84,7 @@ async function handlePin() {
       state.budgets = await loadData('capitalizze.budgets', {});
       state.banks = await loadData('capitalizze.banks', []);
       state.bills = await loadData('capitalizze.bills', []);
-      state.debts = await loadData('capitalizze.debts', []); // Carrega as dívidas
+      state.debts = await loadData('capitalizze.debts', []);
       unlockApp();
     } else {
       setMasterKey(null);
@@ -116,6 +116,40 @@ function unlockApp() {
 
   renderAll();
   initEvents();
+  checkDueBills(); // Verifica contas ao abrir
+}
+
+// Função de Verificação de Contas
+function checkDueBills() {
+  const badge = document.getElementById('bills-badge');
+  if (!state.bills || state.bills.length === 0) {
+    badge.style.display = 'none';
+    return;
+  }
+
+  const today = new Date().getDate();
+  const tomorrow = today + 1;
+  
+  const dueBills = state.bills.filter(b => b.dueDay === today || b.dueDay === tomorrow);
+  
+  if (dueBills.length > 0) {
+    badge.style.display = 'inline-block';
+    
+    if (Notification.permission === 'granted') {
+      dueBills.forEach(bill => {
+        const isToday = bill.dueDay === today;
+        const msg = `A conta "${bill.desc}" (R$ ${bill.amount.toFixed(2)}) vence ${isToday ? 'HOJE' : 'AMANHÃ'}!`;
+        
+        new Notification('Capitalizze - Lembrete de Conta', {
+          body: msg,
+          icon: '/assets/logo.png',
+          vibrate: [200, 100, 200]
+        });
+      });
+    }
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 initSecurityFlow();

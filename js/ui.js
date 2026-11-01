@@ -10,7 +10,7 @@ export function renderAll() {
   renderGoals();
   renderBudgets();
   renderBills();
-  renderDebts(); // NOVO
+  renderDebts();
   renderProfile();
   renderBanksSettings();
   updateBankSelects();
@@ -191,7 +191,6 @@ export function renderBills() {
   }).join('');
 }
 
-// NOVO: RENDERIZAR DÍVIDAS
 export function renderDebts() {
   const debtsList = document.getElementById('debts-list');
   if (state.debts.length === 0) { 
@@ -206,11 +205,8 @@ export function renderDebts() {
     const btnClass = isOwe ? 'pay' : 'receive';
     const personText = d.person ? `• ${d.person}` : '';
     
-    // Cálculo do progresso (quanto já foi pago em relação ao total)
     const paid = d.total - d.remaining;
     const percent = Math.min((paid / d.total) * 100, 100);
-    
-    // Se a dívida já foi quitada
     const isSettled = d.remaining <= 0.01;
     
     return `
