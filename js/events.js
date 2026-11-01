@@ -1,12 +1,14 @@
 import { state } from './state.js';
 import { saveData, loadData, setMasterKey } from './storage.js';
 import { deriveKey } from './crypto.js';
-import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, renderBills, formatBRL } from './ui.js';
+import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, renderTransactions, renderBills, renderDebts, formatBRL } from './ui.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 let currentGoalId = null;
+let currentDebtId = null;
 const goalModal = document.getElementById('goal-modal');
+const debtPaymentModal = document.getElementById('debt-payment-modal');
 
 export function initEvents() {
   // 1. Navegação de Abas
@@ -82,7 +84,7 @@ export function initEvents() {
   document.getElementById('filter-type').addEventListener('change', renderTransactions);
   document.getElementById('search-tx').addEventListener('input', renderTransactions);
 
-  // NOVO: 4. Formulário de Contas (A Pagar/Receber)
+  // 4. Formulário de Contas
   document.getElementById('bill-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const desc = document.getElementById('bill-desc').value.trim();
@@ -94,13 +96,11 @@ export function initEvents() {
 
     state.bills.push({ id: uid(), desc, amount, type, dueDay });
     await saveData('capitalizze.bills', state.bills);
-    
     renderBills();
     document.getElementById('bill-form').reset();
     showToast('Conta cadastrada!');
   });
 
-  // NOVO: Ações nas Contas (Pagar/Receber ou Excluir)
   document.getElementById('bills-list').addEventListener('click', async (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
     const id = btn.dataset.id;
@@ -116,19 +116,12 @@ export function initEvents() {
       const bill = state.bills.find(b => b.id === id);
       if (!bill) return;
 
-      // Transforma a conta em uma transação real
       const txType = bill.type === 'pay' ? 'expense' : 'income';
       state.transactions.push({ 
-        id: uid(), 
-        desc: bill.desc, 
-        amount: bill.amount, 
-        type: txType, 
-        category: 'Geral', 
-        bank: state.banks.length > 0 ? state.banks[0] : 'Geral', 
-        createdAt: Date.now() 
+        id: uid(), desc: bill.desc, amount: bill.amount, type: txType, 
+        category: 'Geral', bank: state.banks.length > 0 ? state.banks[0] : 'Geral', createdAt: Date.now() 
       });
       
-      // Remove a conta da lista de pendentes
       state.bills = state.bills.filter(b => b.id !== id);
       
       await saveData('capitalizze.transactions', state.transactions);
@@ -139,7 +132,91 @@ export function initEvents() {
     }
   });
 
-  // 5. Metas
+  // NOVO: 5. Formulário de Dívidas
+  document.getElementById('debt-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const desc = document.getElementById('debt-desc').value.trim();
+    const amount = parseFloat(document.getElementById('debt-amount').value);
+    const type = document.getElementById('debt-type').value;
+    const person = document.getElementById('debt-person').value.trim();
+
+    if (!desc || !amount || amount <= 0) return;
+
+    state.debts.push({ id: uid(), desc, total: amount, remaining: amount, type, person });
+    await saveData('capitalizze.debts', state.debts);
+    renderDebts();
+    document.getElementById('debt-form').reset();
+    showToast('Dívida cadastrada!');
+  });
+
+  // NOVO: Ações de Dívidas (Abater/Excluir)
+  document.getElementById('debts-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const id = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === 'del-debt') {
+      state.debts = state.debts.filter(d => d.id !== id);
+      await saveData('capitalizze.debts', state.debts);
+      renderDebts();
+      showToast('Dívida removida.', 'danger');
+    } 
+    else if (action === 'settle-debt') {
+      const debt = state.debts.find(d => d.id === id);
+      if (!debt) return;
+
+      currentDebtId = id;
+      document.getElementById('modal-debt-title').textContent = `Abater: ${debt.desc}`;
+      document.getElementById('modal-debt-amount').value = '';
+      debtPaymentModal.classList.add('active');
+      setTimeout(() => document.getElementById('modal-debt-amount').focus(), 100);
+    }
+  });
+
+  // Modal de Dívidas (Confirmar Abatimento)
+  document.getElementById('cancel-debt-payment').addEventListener('click', () => {
+    debtPaymentModal.classList.remove('active');
+    currentDebtId = null;
+  });
+  
+  debtPaymentModal.addEventListener('click', (e) => {
+    if (e.target === debtPaymentModal) { debtPaymentModal.classList.remove('active'); currentDebtId = null; }
+  });
+
+  document.getElementById('confirm-debt-payment').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('modal-debt-amount').value.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) { showToast('Valor inválido.', 'danger'); return; }
+    
+    const debt = state.debts.find(d => d.id === currentDebtId);
+    if (!debt) return;
+
+    // Abate o valor (sem deixar ficar negativo)
+    debt.remaining = Math.max(0, debt.remaining - amount);
+
+    // Cria uma transação automática
+    const txType = debt.type === 'owe' ? 'expense' : 'income';
+    state.transactions.push({
+      id: uid(),
+      desc: `Abatimento: ${debt.desc}`,
+      amount: amount,
+      type: txType,
+      category: 'Dívidas',
+      bank: state.banks.length > 0 ? state.banks[0] : 'Geral',
+      createdAt: Date.now()
+    });
+
+    await saveData('capitalizze.debts', state.debts);
+    await saveData('capitalizze.transactions', state.transactions);
+
+    renderDebts();
+    renderSummary(); updateMonthFilter(); renderTransactions();
+
+    debtPaymentModal.classList.remove('active');
+    currentDebtId = null;
+    showToast(`Dívida abatida e ${formatBRL(amount)} adicionado às transações!`);
+  });
+
+  // 6. Metas
   document.getElementById('goal-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('goal-name').value.trim(); 
@@ -187,7 +264,7 @@ export function initEvents() {
     goalModal.classList.remove('active'); currentGoalId = null;
   });
 
-  // 6. Orçamentos
+  // 7. Orçamentos
   document.getElementById('budget-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const cat = document.getElementById('budget-category').value; 
@@ -207,7 +284,7 @@ export function initEvents() {
     renderBudgets(); showToast('Orçamento removido.', 'danger');
   });
 
-  // 7. Perfil e Configurações
+  // 8. Perfil e Configurações
   let currentAvatarBase64 = state.profile.avatar || null;
   document.getElementById('prof-avatar-input').addEventListener('change', (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -296,6 +373,7 @@ export function initEvents() {
     await saveData('capitalizze.budgets', state.budgets);
     await saveData('capitalizze.banks', state.banks);
     await saveData('capitalizze.bills', state.bills);
+    await saveData('capitalizze.debts', state.debts); // Inclui as dívidas na troca
     await saveData('capitalizze.profile', state.profile);
 
     changePinModal.classList.remove('active');
@@ -312,7 +390,7 @@ export function initEvents() {
     }
   });
 
-  // 8. Calculadoras
+  // 9. Calculadoras
   const simInputs = ['sim-initial', 'sim-monthly', 'sim-rate', 'sim-time'].map(id => document.getElementById(id));
   const calcSim = () => {
     const i = parseFloat(simInputs[0].value) || 0, m = parseFloat(simInputs[1].value) || 0, r = (parseFloat(simInputs[2].value) || 0)/100, t = parseInt(simInputs[3].value) || 0;
@@ -348,9 +426,9 @@ export function initEvents() {
   };
   [dailyInc, dailyFix].forEach(el => el.addEventListener('input', calcDaily));
 
-  // 9. Backup JSON e Exportar CSV
+  // 10. Backup JSON e Exportar CSV
   document.getElementById('btn-export').addEventListener('click', () => {
-    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, bills: state.bills, profile: state.profile };
+    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, bills: state.bills, debts: state.debts, profile: state.profile };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a');
     a.href = url; a.download = `capitalizze-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -368,6 +446,7 @@ export function initEvents() {
         if (data.budgets) { state.budgets = data.budgets; await saveData('capitalizze.budgets', data.budgets); }
         if (data.banks) { state.banks = data.banks; await saveData('capitalizze.banks', data.banks); }
         if (data.bills) { state.bills = data.bills; await saveData('capitalizze.bills', data.bills); }
+        if (data.debts) { state.debts = data.debts; await saveData('capitalizze.debts', data.debts); }
         if (data.profile) { state.profile = data.profile; await saveData('capitalizze.profile', data.profile); }
         
         showToast('Backup restaurado! Recarregando...', 'success');
@@ -377,27 +456,19 @@ export function initEvents() {
     reader.readAsText(file);
   });
 
-  // NOVO: EXPORTAR CSV (Excel)
   document.getElementById('btn-export-csv').addEventListener('click', () => {
     if (state.transactions.length === 0) { showToast('Não há transações para exportar.', 'danger'); return; }
-    
-    // Cabeçalhos
     const headers = ['Data', 'Descrição', 'Categoria', 'Banco', 'Tipo', 'Valor'];
-    
-    // Linhas
     const rows = state.transactions.map(t => {
       const date = new Date(t.createdAt).toLocaleDateString('pt-BR');
-      const desc = `"${t.desc.replace(/"/g, '""')}"`; // Escapa aspas duplas
+      const desc = `"${t.desc.replace(/"/g, '""')}"`;
       const category = `"${t.category}"`;
       const bank = `"${t.bank || 'Geral'}"`;
       const type = t.type === 'income' ? 'Entrada' : 'Saida';
-      const amount = t.amount.toFixed(2).replace('.', ','); // Formato brasileiro
-      return [date, desc, category, bank, type, amount].join(';'); // Separador ';' é o padrão do Excel no Brasil
+      const amount = t.amount.toFixed(2).replace('.', ',');
+      return [date, desc, category, bank, type, amount].join(';');
     });
-
-    // Adiciona o BOM (\uFEFF) para o Excel ler os acentos corretamente
     const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\n');
-    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

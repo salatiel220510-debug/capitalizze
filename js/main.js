@@ -83,7 +83,8 @@ async function handlePin() {
       state.goals = await loadData('capitalizze.goals', []);
       state.budgets = await loadData('capitalizze.budgets', {});
       state.banks = await loadData('capitalizze.banks', []);
-      state.bills = await loadData('capitalizze.bills', []); // Carrega as contas
+      state.bills = await loadData('capitalizze.bills', []);
+      state.debts = await loadData('capitalizze.debts', []); // Carrega as dívidas
       unlockApp();
     } else {
       setMasterKey(null);

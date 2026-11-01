@@ -54,6 +54,7 @@
       <button class="tab-btn active" data-tab="home">Início</button>
       <button class="tab-btn" data-tab="transactions">Transações</button>
       <button class="tab-btn" data-tab="bills">Contas</button>
+      <button class="tab-btn" data-tab="debts">Dívidas</button>
       <button class="tab-btn" data-tab="goals">Metas</button>
       <button class="tab-btn" data-tab="budgets">Orçamentos</button>
       <button class="tab-btn" data-tab="simulator">Simulador</button>
@@ -84,7 +85,7 @@
           <option value="Geral">Geral</option><option value="Alimentação">Alimentação</option>
           <option value="Transporte">Transporte</option><option value="Moradia">Moradia</option>
           <option value="Lazer">Lazer</option><option value="Salário">Salário</option>
-          <option value="Investimento">Investimento</option>
+          <option value="Investimento">Investimento</option><option value="Dívidas">Dívidas</option>
         </select>
         <select id="tx-bank" style="display: none;"></select>
         <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
@@ -105,7 +106,7 @@
       <div class="list"><div id="tx-list"></div></div>
     </section>
 
-    <!-- NOVA ABA CONTAS (A PAGAR/RECEBER) -->
+    <!-- ABA CONTAS (A PAGAR/RECEBER) -->
     <section id="tab-bills" class="tab-content">
       <p class="sim-help">Cadastre contas fixas ou boletos para não esquecer.</p>
       <form id="bill-form" class="form">
@@ -119,6 +120,22 @@
         <button type="submit" class="btn btn-full">Cadastrar Conta</button>
       </form>
       <div class="list" id="bills-list"></div>
+    </section>
+
+    <!-- NOVA ABA DÍVIDAS -->
+    <section id="tab-debts" class="tab-content">
+      <p class="sim-help">Gerencie o que você deve ou o que devem para você.</p>
+      <form id="debt-form" class="form">
+        <input type="text" id="debt-desc" placeholder="Descrição (ex: Empréstimo João)" required maxlength="40">
+        <input type="number" id="debt-amount" placeholder="Valor Total (R$)" step="0.01" min="0.01" required>
+        <select id="debt-type">
+          <option value="owe">Eu Devo (A Pagar)</option>
+          <option value="receive">Me Devem (A Receber)</option>
+        </select>
+        <input type="text" id="debt-person" placeholder="Para quem / De quem (Opcional)" maxlength="30">
+        <button type="submit" class="btn btn-full">Cadastrar Dívida</button>
+      </form>
+      <div class="list" id="debts-list"></div>
     </section>
 
     <!-- ABA METAS -->
@@ -271,13 +288,13 @@
           <button id="btn-export" class="btn btn-outline">⬇️ Backup (JSON)</button>
           <label for="import-file" class="btn btn-outline">⬆️ Restaurar</label>
           <input type="file" id="import-file" accept=".json" style="display: none;">
-          <button id="btn-export-csv" class="btn btn-outline">📊 Exportar para Excel (CSV)</button>
+          <button id="btn-export-csv" class="btn btn-outline">📊 Exportar Excel (CSV)</button>
         </div>
       </div>
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.1.1</p>
+      <p>Capitalizze &copy; 2026 - v1.1.2</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
@@ -305,6 +322,19 @@
       <div class="modal-actions">
         <button class="btn btn-outline" id="cancel-change-pin">Cancelar</button>
         <button class="btn" id="confirm-change-pin">Salvar Novo PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOVO MODAL DE ABATER DÍVIDA -->
+  <div id="debt-payment-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3 id="modal-debt-title">Abater Dívida</h3>
+      <p class="modal-desc">Quanto foi pago ou recebido?</p>
+      <input type="number" id="modal-debt-amount" placeholder="R$ 0,00" step="0.01" min="0.01">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="cancel-debt-payment">Cancelar</button>
+        <button class="btn" id="confirm-debt-payment">Confirmar</button>
       </div>
     </div>
   </div>

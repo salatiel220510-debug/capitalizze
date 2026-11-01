@@ -3,7 +3,8 @@ export let state = {
   goals: [],
   budgets: {},
   banks: [],
-  bills: [], // NOVO: Contas a pagar/receber
+  bills: [],
+  debts: [], // NOVO
   profile: { name: 'Visitante', email: '', avatar: null, joined: Date.now() }
 };
 

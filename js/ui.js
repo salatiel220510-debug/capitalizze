@@ -9,7 +9,8 @@ export function renderAll() {
   renderCharts();
   renderGoals();
   renderBudgets();
-  renderBills(); // NOVO
+  renderBills();
+  renderDebts(); // NOVO
   renderProfile();
   renderBanksSettings();
   updateBankSelects();
@@ -176,33 +177,63 @@ export function renderBudgets() {
   }).join('');
 }
 
-// NOVO: RENDERIZAR CONTAS A PAGAR/RECEBER
 export function renderBills() {
   const billsList = document.getElementById('bills-list');
-  if (state.bills.length === 0) { 
-    billsList.innerHTML = '<div class="empty">Nenhuma conta cadastrada no momento.</div>'; 
-    return; 
-  }
-
-  // Ordena pelo dia do vencimento
+  if (state.bills.length === 0) { billsList.innerHTML = '<div class="empty">Nenhuma conta cadastrada no momento.</div>'; return; }
   const sortedBills = [...state.bills].sort((a, b) => a.dueDay - b.dueDay);
-
   billsList.innerHTML = sortedBills.map(b => {
     const isPay = b.type === 'pay';
     const color = isPay ? 'var(--danger)' : 'var(--success)';
     const label = isPay ? 'Pagar' : 'Receber';
     const btnClass = isPay ? 'pay' : 'receive';
     const sign = isPay ? '-' : '+';
+    return `<div class="tx"><div class="tx-info"><div class="tx-desc">${escapeHtml(b.desc)}</div><div class="tx-meta">Vence dia ${b.dueDay}</div></div><div class="tx-amount" style="color: ${color}">${sign} ${formatBRL(b.amount)}</div><button class="btn-settle ${btnClass}" data-action="settle-bill" data-id="${b.id}">${label}</button><button class="tx-del" data-action="del-bill" data-id="${b.id}" title="Excluir">✕</button></div>`;
+  }).join('');
+}
+
+// NOVO: RENDERIZAR DÍVIDAS
+export function renderDebts() {
+  const debtsList = document.getElementById('debts-list');
+  if (state.debts.length === 0) { 
+    debtsList.innerHTML = '<div class="empty">Nenhuma dívida cadastrada.</div>'; 
+    return; 
+  }
+
+  debtsList.innerHTML = state.debts.map(d => {
+    const isOwe = d.type === 'owe';
+    const color = isOwe ? 'var(--danger)' : 'var(--success)';
+    const label = isOwe ? 'Abater (Pagar)' : 'Abater (Receber)';
+    const btnClass = isOwe ? 'pay' : 'receive';
+    const personText = d.person ? `• ${d.person}` : '';
+    
+    // Cálculo do progresso (quanto já foi pago em relação ao total)
+    const paid = d.total - d.remaining;
+    const percent = Math.min((paid / d.total) * 100, 100);
+    
+    // Se a dívida já foi quitada
+    const isSettled = d.remaining <= 0.01;
     
     return `
-      <div class="tx">
-        <div class="tx-info">
-          <div class="tx-desc">${escapeHtml(b.desc)}</div>
-          <div class="tx-meta">Vence dia ${b.dueDay}</div>
+      <div class="debt-item" style="flex-direction: column; align-items: stretch;">
+        <div class="goal-header" style="margin-bottom: 12px;">
+          <div>
+            <div class="goal-title">${escapeHtml(d.desc)}</div>
+            <div class="tx-meta">${isOwe ? 'Eu devo' : 'Me devem'} ${personText}</div>
+          </div>
+          <div class="tx-amount" style="color: ${color};">Falta: ${formatBRL(d.remaining > 0 ? d.remaining : 0)}</div>
         </div>
-        <div class="tx-amount" style="color: ${color}">${sign} ${formatBRL(b.amount)}</div>
-        <button class="btn-settle ${btnClass}" data-action="settle-bill" data-id="${b.id}">${label}</button>
-        <button class="tx-del" data-action="del-bill" data-id="${b.id}" title="Excluir">✕</button>
+        
+        <div class="progress-wrapper" style="margin-bottom: 16px;">
+          <div class="progress-bar ${isSettled ? 'safe' : (isOwe ? 'danger' : 'safe')}" style="width: ${percent}%"></div>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="tx-meta">Pago: ${formatBRL(paid)} de ${formatBRL(d.total)}</div>
+          <div class="goal-actions">
+            ${!isSettled ? `<button class="btn-settle ${btnClass}" data-action="settle-debt" data-id="${d.id}">${label}</button>` : `<span style="color: var(--success); font-weight: bold; margin-right: 12px;">✓ Quitada</span>`}
+            <button class="tx-del" data-action="del-debt" data-id="${d.id}" title="Excluir">✕</button>
+          </div>
+        </div>
       </div>
     `;
   }).join('');

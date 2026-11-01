@@ -98,11 +98,11 @@ header { margin-bottom: 24px; text-align: center; display: flex; flex-direction:
 .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 .legend-color { width: 12px; height: 12px; border-radius: 50%; }
 
-.goal-item, .budget-item { padding: 20px 24px; border-bottom: 1px solid var(--border); }
-.goal-item:last-child, .budget-item:last-child { border-bottom: none; }
-.goal-header, .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.goal-title, .budget-title { font-size: 1.1rem; font-weight: 600; }
-.goal-values, .budget-values { font-size: 0.9rem; color: var(--muted); font-weight: 500;}
+.goal-item, .budget-item, .debt-item { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+.goal-item:last-child, .budget-item:last-child, .debt-item:last-child { border-bottom: none; }
+.goal-header, .budget-header, .debt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.goal-title, .budget-title, .debt-title { font-size: 1.1rem; font-weight: 600; }
+.goal-values, .budget-values, .debt-values { font-size: 0.9rem; color: var(--muted); font-weight: 500;}
 .progress-wrapper { background: var(--bg); height: 12px; border-radius: var(--radius-pill); overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border); }
 .progress-bar { height: 100%; width: 0%; transition: width 0.5s ease; border-radius: var(--radius-pill); }
 .progress-bar.safe { background: var(--success); box-shadow: 0 0 10px var(--success-glow); }
@@ -125,7 +125,6 @@ header { margin-bottom: 24px; text-align: center; display: flex; flex-direction:
 .bank-card { background: var(--bg); border-left: 4px solid var(--primary); }
 .bank-card .card-label { color: var(--primary); font-weight: 700;}
 
-/* Estilo específico para o botão de pagar/receber conta */
 .btn-settle { padding: 8px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; color: #fff; transition: 0.2s; }
 .btn-settle:hover { transform: scale(1.05); }
 .btn-settle.pay { background: var(--danger); }
@@ -187,4 +186,6 @@ footer strong { color: var(--text); }
   .donut-container { flex-direction: column; }
   .donut-svg { width: 160px; height: 160px; }
   .profile-header { flex-direction: column; text-align: center; }
+  .debt-item { flex-direction: column; align-items: flex-start; }
+  .debt-item .tx-amount { margin-bottom: 12px; font-size: 1.2rem; }
 }
