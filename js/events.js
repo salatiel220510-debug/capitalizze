@@ -1,0 +1,285 @@
+// js/events.js
+import { state } from './state.js';
+import { saveData } from './storage.js';
+import { renderAll, renderSummary, renderGoals, renderBudgets, renderProfile, renderBanksSettings, updateBankSelects, updateMonthFilter, formatBRL } from './ui.js';
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+// Variáveis de controle do Modal
+let currentGoalId = null;
+const goalModal = document.getElementById('goal-modal');
+
+export function initEvents() {
+  // 1. Navegação de Abas
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+
+  // 2. Formulário de Transações
+  const typeSelect = document.getElementById('type');
+  const submitBtn = document.getElementById('submit-btn');
+  
+  typeSelect.addEventListener('change', (e) => {
+    if (e.target.value === 'expense') { submitBtn.textContent = 'Adicionar Despesa'; submitBtn.classList.add('danger'); }
+    else { submitBtn.textContent = 'Adicionar Entrada'; submitBtn.classList.remove('danger'); }
+  });
+
+  document.getElementById('tx-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const desc = document.getElementById('desc').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
+    const txBankSelect = document.getElementById('tx-bank');
+    
+    if (!desc || !amount || amount <= 0) return;
+    
+    let bank = 'Geral';
+    if (txBankSelect.style.display !== 'none') {
+      bank = txBankSelect.value;
+      if (bank === 'Geral') { showToast('Selecione um banco.', 'danger'); return; }
+    }
+
+    state.transactions.push({ 
+      id: uid(), desc, amount, 
+      type: typeSelect.value, 
+      category: document.getElementById('category').value, 
+      bank, createdAt: Date.now() 
+    });
+    
+    await saveData('capitalizze.transactions', state.transactions);
+    
+    renderSummary(); updateMonthFilter();
+    document.getElementById('tx-form').reset(); 
+    submitBtn.textContent = 'Adicionar Entrada'; submitBtn.classList.remove('danger');
+    showToast('Transação adicionada!');
+  });
+
+  // 3. Exclusão de Transação (com Desfazer)
+  document.getElementById('tx-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.tx-del'); if (!btn) return;
+    const id = btn.dataset.id; 
+    const removedTx = state.transactions.find(t => t.id === id); 
+    const index = state.transactions.findIndex(t => t.id === id);
+    if (index === -1) return;
+
+    state.transactions.splice(index, 1); 
+    await saveData('capitalizze.transactions', state.transactions);
+    renderSummary(); updateMonthFilter();
+    
+    showToast('Transação excluída.', 'danger', 'Desfazer', async () => {
+      state.transactions.splice(index, 0, removedTx); 
+      await saveData('capitalizze.transactions', state.transactions);
+      renderSummary(); updateMonthFilter(); 
+      showToast('Exclusão desfeita.');
+    });
+  });
+
+  // Filtro de mês
+  document.getElementById('month-filter').addEventListener('change', () => {
+    const listEl = document.getElementById('tx-list');
+    const filter = document.getElementById('month-filter').value;
+    import('./ui.js').then(ui => ui.renderTransactions());
+  });
+
+  // 4. Metas
+  document.getElementById('goal-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('goal-name').value.trim(); 
+    const target = parseFloat(document.getElementById('goal-target').value);
+    if (!name || !target || target <= 0) return;
+    
+    state.goals.push({ id: uid(), name, target, current: 0 }); 
+    await saveData('capitalizze.goals', state.goals);
+    renderGoals(); 
+    document.getElementById('goal-form').reset(); 
+    showToast('Meta criada!');
+  });
+
+  document.getElementById('goals-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const id = btn.dataset.id; 
+    const goal = state.goals.find(g => g.id === id); if (!goal) return;
+    
+    if (btn.dataset.action === 'del-goal') {
+      state.goals = state.goals.filter(g => g.id !== id); 
+      await saveData('capitalizze.goals', state.goals);
+      renderGoals(); 
+      showToast('Meta excluída.', 'danger');
+    } else if (btn.dataset.action === 'add-goal') {
+      currentGoalId = id; 
+      document.getElementById('modal-goal-title').textContent = `Guardar em: ${goal.name}`; 
+      document.getElementById('modal-goal-amount').value = ''; 
+      goalModal.classList.add('active'); 
+      setTimeout(() => document.getElementById('modal-goal-amount').focus(), 100);
+    }
+  });
+
+  // Modal Metas Controles
+  document.getElementById('modal-cancel').addEventListener('click', () => { goalModal.classList.remove('active'); currentGoalId = null; });
+  goalModal.addEventListener('click', (e) => { if (e.target === goalModal) { goalModal.classList.remove('active'); currentGoalId = null; } });
+  document.getElementById('modal-confirm').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('modal-goal-amount').value.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) { showToast('Valor inválido.', 'danger'); return; }
+    const goal = state.goals.find(g => g.id === currentGoalId);
+    if (goal) { 
+      goal.current += amount; 
+      await saveData('capitalizze.goals', state.goals);
+      renderGoals(); showToast('Valor guardado!'); 
+    }
+    goalModal.classList.remove('active'); currentGoalId = null;
+  });
+
+  // 5. Orçamentos
+  document.getElementById('budget-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const cat = document.getElementById('budget-category').value; 
+    const amount = parseFloat(document.getElementById('budget-amount').value);
+    if (!amount || amount <= 0) return;
+    state.budgets[cat] = amount; 
+    await saveData('capitalizze.budgets', state.budgets);
+    renderBudgets(); 
+    document.getElementById('budget-form').reset(); 
+    showToast(`Orçamento de ${cat} definido!`);
+  });
+
+  document.getElementById('budgets-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action="del-budget"]'); if (!btn) return;
+    delete state.budgets[btn.dataset.cat]; 
+    await saveData('capitalizze.budgets', state.budgets);
+    renderBudgets(); showToast('Orçamento removido.', 'danger');
+  });
+
+  // 6. Perfil e Configurações
+  let currentAvatarBase64 = state.profile.avatar || null;
+  document.getElementById('prof-avatar-input').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 150;
+        let width = img.width, height = img.height;
+        if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
+        else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        currentAvatarBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        document.getElementById('profile-avatar-img').src = currentAvatarBase64;
+        document.getElementById('profile-avatar-img').style.display = 'block';
+        document.getElementById('profile-avatar-placeholder').style.display = 'none';
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    state.profile.name = document.getElementById('prof-name').value.trim() || 'Visitante';
+    state.profile.email = document.getElementById('prof-email').value.trim() || 'email@exemplo.com';
+    state.profile.avatar = currentAvatarBase64;
+    await saveData('capitalizze.profile', state.profile);
+    renderProfile(); showToast('Perfil atualizado!');
+  });
+
+  document.getElementById('theme-toggle-settings').addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    localStorage.setItem('capitalizze.theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+  });
+
+  document.getElementById('banks-checkboxes').addEventListener('change', async (e) => {
+    if (e.target.tagName === 'INPUT') {
+      if (e.target.checked) { if (!state.banks.includes(e.target.value)) state.banks.push(e.target.value); }
+      else { state.banks = state.banks.filter(b => b !== e.target.value); }
+      await saveData('capitalizze.banks', state.banks);
+      updateBankSelects(); renderSummary(); 
+      showToast(`Bancos atualizados.`);
+    }
+  });
+
+  // 7. Calculadoras
+  const simInputs = ['sim-initial', 'sim-monthly', 'sim-rate', 'sim-time'].map(id => document.getElementById(id));
+  const calcSim = () => {
+    const i = parseFloat(simInputs[0].value) || 0, m = parseFloat(simInputs[1].value) || 0, r = (parseFloat(simInputs[2].value) || 0)/100, t = parseInt(simInputs[3].value) || 0;
+    const total = i + (m * t);
+    const final = r === 0 ? total : (i * Math.pow(1+r, t)) + (m * ((Math.pow(1+r, t) - 1) / r));
+    document.getElementById('sim-total-invested').textContent = formatBRL(total);
+    document.getElementById('sim-interest').textContent = formatBRL(final - total);
+    document.getElementById('sim-final').textContent = formatBRL(final);
+  };
+  simInputs.forEach(el => el.addEventListener('input', calcSim));
+
+  const resCost = document.getElementById('res-cost'), resMonths = document.getElementById('res-months');
+  const calcRes = () => { document.getElementById('res-result').textContent = formatBRL((parseFloat(resCost.value)||0) * (parseInt(resMonths.value)||0)); };
+  [resCost, resMonths].forEach(el => el.addEventListener('input', calcRes));
+
+  const calcVal = document.getElementById('calc-value'), calcFee = document.getElementById('calc-fee'), calcInst = document.getElementById('calc-installments');
+  const calcTax = () => {
+    const val = parseFloat(calcVal.value) || 0, fee = (parseFloat(calcFee.value) || 0) / 100, inst = parseInt(calcInst.value) || 1;
+    const total = val * (1 + fee);
+    document.getElementById('calc-total').textContent = formatBRL(total);
+    document.getElementById('calc-per-installment').textContent = formatBRL(total / inst);
+  };
+  [calcVal, calcFee, calcInst].forEach(el => el.addEventListener('input', calcTax));
+
+  const dailyInc = document.getElementById('daily-income'), dailyFix = document.getElementById('daily-fixed');
+  const calcDaily = () => {
+    const inc = parseFloat(dailyInc.value) || 0, fix = parseFloat(dailyFix.value) || 0;
+    const avail = inc - fix;
+    const daily = avail / 30;
+    const resEl = document.getElementById('daily-result');
+    resEl.textContent = formatBRL(daily > 0 ? daily : 0);
+    resEl.style.color = avail <= 0 ? 'var(--danger)' : 'var(--success)';
+  };
+  [dailyInc, dailyFix].forEach(el => el.addEventListener('input', calcDaily));
+
+  // 8. Backup
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const data = { transactions: state.transactions, goals: state.goals, budgets: state.budgets, banks: state.banks, profile: state.profile };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = `capitalizze-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click(); URL.revokeObjectURL(url); showToast('Backup gerado!');
+  });
+
+  document.getElementById('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(evt) {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (data.transactions) { state.transactions = data.transactions; await saveData('capitalizze.transactions', data.transactions); }
+        if (data.goals) { state.goals = data.goals; await saveData('capitalizze.goals', data.goals); }
+        if (data.budgets) { state.budgets = data.budgets; await saveData('capitalizze.budgets', data.budgets); }
+        if (data.banks) { state.banks = data.banks; await saveData('capitalizze.banks', data.banks); }
+        if (data.profile) { state.profile = data.profile; await saveData('capitalizze.profile', data.profile); }
+        
+        showToast('Backup restaurado! Recarregando...', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } catch (err) { showToast('Erro ao ler o arquivo.', 'danger'); }
+    };
+    reader.readAsText(file);
+  });
+}
+
+// Função global de Toast
+export function showToast(message, type = 'success', actionText = null, actionCallback = null) {
+  const toastContainer = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.classList.add('toast', type);
+  toast.innerHTML = `<span class="toast-msg">${message}</span>`;
+  if (actionText && actionCallback) {
+    const btn = document.createElement('button');
+    btn.classList.add('toast-btn'); btn.textContent = actionText;
+    btn.onclick = () => { actionCallback(); toast.style.animation = 'slideOutRight 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); };
+    toast.appendChild(btn);
+  }
+  toastContainer.appendChild(toast);
+  setTimeout(() => { if (document.body.contains(toast)) { toast.style.animation = 'slideOutRight 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); } }, 4000);
+}

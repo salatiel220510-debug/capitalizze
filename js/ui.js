@@ -1,0 +1,213 @@
+// js/ui.js
+import { state } from './state.js';
+
+export function formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+export function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+// Função principal que atualiza tudo de uma vez
+export function renderAll() {
+  renderSummary();
+  renderTransactions();
+  renderCharts();
+  renderGoals();
+  renderBudgets();
+  renderProfile();
+  renderBanksSettings();
+  updateBankSelects();
+  updateMonthFilter();
+}
+
+export function renderSummary() {
+  const inc = state.transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const exp = state.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  
+  document.getElementById('balance').textContent = formatBRL(inc - exp);
+  document.getElementById('income').textContent = formatBRL(inc);
+  document.getElementById('expense').textContent = formatBRL(exp);
+
+  // Renderiza os cards separados por banco
+  const bankSummaryContainer = document.getElementById('bank-summary-container');
+  const bankCardsContainer = document.getElementById('bank-cards');
+
+  if (state.banks.length > 0) {
+    bankSummaryContainer.style.display = 'block';
+    bankCardsContainer.innerHTML = state.banks.map(bank => {
+      const bankTxs = state.transactions.filter(t => t.bank === bank);
+      const bInc = bankTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const bExp = bankTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      return `
+        <div class="card bank-card">
+          <div class="card-label">${bank}</div>
+          <div class="card-value" style="font-size: 1.4rem; margin-bottom: 8px;">Saldo: ${formatBRL(bInc - bExp)}</div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+            <span style="color: var(--success)">+ ${formatBRL(bInc)}</span>
+            <span style="color: var(--danger)">- ${formatBRL(bExp)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    bankSummaryContainer.style.display = 'none';
+  }
+}
+
+export function renderTransactions() {
+  const listEl = document.getElementById('tx-list');
+  const filter = document.getElementById('month-filter').value;
+  
+  const filtered = state.transactions.filter(t => {
+    if (filter === 'all') return true;
+    const d = new Date(t.createdAt);
+    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` === filter;
+  });
+
+  if (filtered.length === 0) { 
+    listEl.innerHTML = '<div class="empty">Nenhuma transação encontrada.</div>'; 
+    return; 
+  }
+
+  const sorted = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
+  
+  listEl.innerHTML = sorted.map(t => `
+    <div class="tx">
+      <div class="tx-info">
+        <div class="tx-desc">${escapeHtml(t.desc)}</div>
+        <div class="tx-meta">${t.category} ${t.bank ? `• ${t.bank}` : ''} • ${new Date(t.createdAt).toLocaleDateString('pt-BR')}</div>
+      </div>
+      <div class="tx-amount ${t.type}">${t.type === 'income' ? '+' : '−'} ${formatBRL(t.amount)}</div>
+      <button class="tx-del" data-id="${t.id}" title="Excluir">✕</button>
+    </div>
+  `).join('');
+}
+
+export function updateMonthFilter() {
+  const monthFilter = document.getElementById('month-filter');
+  const months = new Set();
+  const currentValue = monthFilter.value;
+
+  state.transactions.forEach(t => {
+    const d = new Date(t.createdAt);
+    months.add(`${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`);
+  });
+
+  const sorted = Array.from(months).sort((a, b) => {
+    const [mA, yA] = a.split('/'); const [mB, yB] = b.split('/');
+    return new Date(yB, mB - 1) - new Date(yA, mA - 1);
+  });
+
+  monthFilter.innerHTML = '<option value="all">Todos os meses</option>';
+  sorted.forEach(m => { 
+    const o = document.createElement('option'); 
+    o.value = m; o.textContent = m; 
+    monthFilter.appendChild(o); 
+  });
+  
+  monthFilter.value = (currentValue && Array.from(monthFilter.options).some(o => o.value === currentValue)) ? currentValue : 'all';
+}
+
+export function renderCharts() {
+  const chartBars = document.getElementById('chart-bars');
+  const donutChart = document.getElementById('donut-chart');
+  const expenses = state.transactions.filter(t => t.type === 'expense');
+  
+  if (expenses.length === 0) {
+    chartBars.innerHTML = '<div class="empty">Adicione despesas para ver o gráfico.</div>';
+    donutChart.innerHTML = '<div class="empty">Adicione despesas para ver o gráfico.</div>';
+    return;
+  }
+
+  const byCategory = {};
+  expenses.forEach(t => { byCategory[t.category] = (byCategory[t.category] || 0) + t.amount; });
+  const sortedCats = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  const totalExpense = sortedCats.reduce((s, [_, v]) => s + v, 0);
+  const maxVal = sortedCats[0][1];
+  const CHART_COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#64748b'];
+
+  chartBars.innerHTML = sortedCats.map(([cat, val], i) => {
+    const percent = (val / maxVal) * 100;
+    return `<div class="chart-row"><div class="chart-label">${cat}</div><div class="chart-bar-wrapper"><div class="chart-bar" style="width: ${percent}%; background: ${CHART_COLORS[i % CHART_COLORS.length]}"></div></div><div class="chart-value">${formatBRL(val)}</div></div>`;
+  }).join('');
+
+  const radius = 50, circumference = 2 * Math.PI * radius; let offset = 0;
+  const svgCircles = sortedCats.map(([cat, val], i) => {
+    const percent = val / totalExpense; 
+    const dashArray = `${percent * circumference} ${circumference}`; 
+    const dashOffset = -offset * circumference; 
+    offset += percent;
+    return `<circle cx="60" cy="60" r="${radius}" stroke="${CHART_COLORS[i % CHART_COLORS.length]}" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
+  }).join('');
+  
+  const legend = sortedCats.map(([cat, val], i) => `<div class="legend-item"><div class="legend-color" style="background: ${CHART_COLORS[i % CHART_COLORS.length]}"></div><span>${cat} (${((val/totalExpense)*100).toFixed(1)}%)</span></div>`).join('');
+  
+  donutChart.innerHTML = `<svg class="donut-svg" viewBox="0 0 120 120">${svgCircles}</svg><div class="donut-legend">${legend}</div>`;
+}
+
+export function renderGoals() {
+  const goalsList = document.getElementById('goals-list');
+  if (state.goals.length === 0) { goalsList.innerHTML = '<div class="empty">Você ainda não tem metas.</div>'; return; }
+  goalsList.innerHTML = state.goals.map(g => {
+    const percent = Math.min((g.current / g.target) * 100, 100);
+    return `<div class="goal-item"><div class="goal-header"><div class="goal-title">${escapeHtml(g.name)}</div><div class="goal-values">${formatBRL(g.current)} de ${formatBRL(g.target)}</div></div><div class="progress-wrapper"><div class="progress-bar safe" style="width: ${percent}%"></div></div><div class="goal-actions"><button class="btn btn-sm" data-action="add-goal" data-id="${g.id}">+ Guardar</button><button class="btn btn-sm danger" data-action="del-goal" data-id="${g.id}">Excluir</button></div></div>`;
+  }).join('');
+}
+
+export function renderBudgets() {
+  const budgetsList = document.getElementById('budgets-list');
+  const now = new Date();
+  const currentMonthStr = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const currentExpenses = state.transactions.filter(t => t.type === 'expense' && `${String(new Date(t.createdAt).getMonth() + 1).padStart(2, '0')}/${new Date(t.createdAt).getFullYear()}` === currentMonthStr);
+  
+  const budgetEntries = Object.entries(state.budgets);
+  if (budgetEntries.length === 0) { budgetsList.innerHTML = '<div class="empty">Nenhum orçamento definido.</div>'; return; }
+  
+  budgetsList.innerHTML = budgetEntries.map(([cat, limit]) => {
+    const spent = currentExpenses.filter(t => t.category === cat).reduce((s, t) => s + t.amount, 0);
+    const percent = Math.min((spent / limit) * 100, 100);
+    let barClass = 'safe'; if (percent >= 100) barClass = 'danger'; else if (percent >= 80) barClass = 'warning';
+    return `<div class="budget-item"><div class="budget-header"><div class="budget-title">${cat}</div><div class="budget-values" style="color: ${percent >= 100 ? 'var(--danger)' : 'var(--muted)'}">${formatBRL(spent)} de ${formatBRL(limit)}</div></div><div class="progress-wrapper"><div class="progress-bar ${barClass}" style="width: ${percent}%"></div></div><div class="goal-actions"><button class="btn btn-sm danger" data-action="del-budget" data-cat="${cat}">Remover</button></div></div>`;
+  }).join('');
+}
+
+export function renderProfile() {
+  document.getElementById('profile-display-name').textContent = state.profile.name;
+  document.getElementById('profile-display-email').textContent = state.profile.email;
+  document.getElementById('profile-display-date').textContent = `Membro desde: ${new Date(state.profile.joined).toLocaleDateString('pt-BR')}`;
+  
+  document.getElementById('prof-name').value = state.profile.name;
+  document.getElementById('prof-email').value = state.profile.email;
+
+  const img = document.getElementById('profile-avatar-img');
+  const placeholder = document.getElementById('profile-avatar-placeholder');
+  
+  if (state.profile.avatar) {
+    img.src = state.profile.avatar;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+}
+
+export function renderBanksSettings() {
+  const banksCheckboxes = document.getElementById('banks-checkboxes');
+  const AVAILABLE_BANKS = ['Nubank', 'Inter', 'Itaú', 'Bradesco', 'Caixa', 'Santander', 'C6 Bank', 'PicPay', 'Mercado Pago'];
+  
+  banksCheckboxes.innerHTML = AVAILABLE_BANKS.map(bank => `
+    <label class="bank-checkbox">
+      <input type="checkbox" value="${bank}" ${state.banks.includes(bank) ? 'checked' : ''}>
+      ${bank}
+    </label>
+  `).join('');
+}
+
+export function updateBankSelects() {
+  const txBankSelect = document.getElementById('tx-bank');
+  if (state.banks.length > 0) {
+    txBankSelect.style.display = 'block';
+    txBankSelect.innerHTML = `<option value="Geral">Selecione o Banco...</option>` + state.banks.map(b => `<option value="${b}">${b}</option>`).join('');
+  } else {
+    txBankSelect.style.display = 'none';
+    txBankSelect.innerHTML = `<option value="Geral">Geral (Sem banco)</option>`;
+  }
+}
