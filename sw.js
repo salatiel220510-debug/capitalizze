@@ -1,8 +1,8 @@
-const CACHE_NAME = 'capitalizze-v1.1.5-final';
+const CACHE_NAME = 'capitalizze-v1.1.6';
 const ASSETS_TO_CACHE = [
   '/',
-  '/index.html',     // A Landing Page
-  '/app.html',       // O App real
+  '/index.html',
+  '/app.html',
   '/css/style.css',
   '/js/main.js',
   '/js/state.js',
@@ -12,8 +12,8 @@ const ASSETS_TO_CACHE = [
   '/js/storage.js',
   '/assets/logo.png',
   '/assets/logo-horizontal.png',
-  '/assets/og-image.jpg', // Imagem de compartilhamento
-  '/assets/qrcode.png',   // QR Code do Pix
+  '/assets/og-image.jpg',
+  '/assets/qrcode.png',
   '/manifest.json'
 ];
 
@@ -40,26 +40,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Se for requisição de página HTML, busca da rede primeiro (Network First)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Para os outros arquivos (CSS, JS, Imagens), usa o Cache First
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
-    })
-  );
-});
-
-// Lidar com o clique na notificação
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes('app.html') && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow('/app.html');
-      }
     })
   );
 });
