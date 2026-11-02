@@ -228,3 +228,29 @@ footer strong { color: var(--text); }
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
+
+/* --- BANNER DE INSTALAÇÃO PWA --- */
+.install-banner {
+  position: fixed; bottom: 80px; left: 16px; right: 16px;
+  background: var(--surface); border: 1px solid var(--primary);
+  border-radius: 16px; padding: 16px; z-index: 2000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: slideInBottom 0.5s ease forwards;
+}
+@keyframes slideInBottom {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.install-content { display: flex; align-items: center; gap: 12px; }
+.install-content img { width: 40px; height: 40px; border-radius: 8px; }
+.install-text { flex: 1; }
+.install-text h4 { margin: 0; font-size: 0.95rem; }
+.install-text p { margin: 0; font-size: 0.75rem; color: var(--muted); }
+.install-content .btn { padding: 8px 16px; font-size: 0.85rem; box-shadow: none; }
+.btn-close { background: transparent; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+.btn-close:hover { color: var(--danger); }
+
+/* No Desktop o banner pode ficar um pouco menor */
+@media (min-width: 768px) {
+  .install-banner { max-width: 400px; left: auto; right: 24px; bottom: 24px; }
+}

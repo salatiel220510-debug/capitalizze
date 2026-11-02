@@ -564,3 +564,50 @@ async function finishTour() {
   await saveData('capitalizze.profile', state.profile);
   showToast('Tour concluído! Bom proveito.', 'success');
 }
+
+// --- SISTEMA DE INSTALAÇÃO PWA (BANNER) ---
+let deferredPrompt;
+const installBanner = document.getElementById('install-banner');
+const btnInstall = document.getElementById('btn-install');
+const btnCloseInstall = document.getElementById('btn-close-install');
+
+// O navegador dispara esse evento quando o app está pronto para ser instalado
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  
+  // Verifica se o usuário fechou o banner nos últimos 7 dias para não ser chato
+  const lastDismissed = localStorage.getItem('capitalizze_install_dismissed');
+  if (lastDismissed) {
+    const daysSinceDismissed = (Date.now() - parseInt(lastDismissed)) / (1000 * 60 * 60 * 24);
+    if (daysSinceDismissed < 7) return;
+  }
+  
+  // Mostra o banner apenas se o app não estiver rodando como PWA instalado
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  
+  installBanner.style.display = 'block';
+});
+
+btnInstall.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  
+  if (outcome === 'accepted') {
+    installBanner.style.display = 'none';
+    showToast('Capitalizze instalado com sucesso!', 'success');
+  }
+  deferredPrompt = null;
+});
+
+btnCloseInstall.addEventListener('click', () => {
+  installBanner.style.display = 'none';
+  // Salva no navegador que o usuário fechou o banner para não mostrar de novo por 7 dias
+  localStorage.setItem('capitalizze_install_dismissed', Date.now().toString());
+});
+
+// Se o app for instalado com sucesso, esconde o banner
+window.addEventListener('appinstalled', () => {
+  installBanner.style.display = 'none';
+});

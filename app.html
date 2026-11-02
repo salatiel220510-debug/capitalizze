@@ -352,7 +352,28 @@
     </div>
   </div>
 
+  <!-- NOVO: BANNER DE INSTALAÇÃO PWA -->
+  <div id="install-banner" class="install-banner" style="display: none;">
+    <div class="install-content">
+      <img src="assets/logo.png" alt="Logo">
+      <div class="install-text">
+        <h4>Instale o Capitalizze</h4>
+        <p>Tenha o app na palma da sua mão!</p>
+      </div>
+      <button id="btn-install" class="btn">Instalar</button>
+      <button id="btn-close-install" class="btn-close">✕</button>
+    </div>
+  </div>
+
   <div id="toast-container" class="toast-container"></div>
+
+    <!-- Vercel Web Analytics (Vanilla JS) -->
+  <script>
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  
   <script type="module" src="js/main.js"></script>
+
 </body>
 </html>
