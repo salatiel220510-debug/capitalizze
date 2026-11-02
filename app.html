@@ -12,6 +12,12 @@
 </head>
 <body>
 
+  <!-- NOVA TELA DE CARREGAMENTO -->
+  <div id="loading-screen" class="loading-screen" style="display: none;">
+    <img src="assets/logo.png" alt="Carregando..." class="pulse-logo">
+    <p>Descriptografando dados...</p>
+  </div>
+
   <div id="setup-screen" class="lock-screen" style="display: none;">
     <div class="lock-content" style="max-width: 450px;">
       <img src="assets/logo.png" alt="Capitalizze" style="width: 80px; margin-bottom: 15px;">
@@ -97,7 +103,6 @@
     <section id="tab-bills" class="tab-content">
       <div class="chart-container" style="padding: 20px;">
         <h3>Lançamentos Recorrentes (Automáticos)</h3>
-        <p class="sim-help" style="margin-bottom: 12px; font-size: 0.85rem;">Cadastre contas fixas para serem lançadas automaticamente todo mês.</p>
         <form id="rec-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
           <input type="text" id="rec-desc" placeholder="Descrição (ex: Salário)" required maxlength="40">
           <input type="number" id="rec-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
@@ -123,14 +128,10 @@
     </section>
 
     <section id="tab-debts" class="tab-content">
-      <p class="sim-help">Gerencie o que você deve ou o que devem para você.</p>
       <form id="debt-form" class="form">
         <input type="text" id="debt-desc" placeholder="Descrição (ex: Empréstimo João)" required maxlength="40">
         <input type="number" id="debt-amount" placeholder="Valor Total (R$)" step="0.01" min="0.01" required>
-        <select id="debt-type">
-          <option value="owe">Eu Devo (A Pagar)</option>
-          <option value="receive">Me Devem (A Receber)</option>
-        </select>
+        <select id="debt-type"><option value="owe">Eu Devo (A Pagar)</option><option value="receive">Me Devem (A Receber)</option></select>
         <input type="text" id="debt-person" placeholder="Para quem / De quem (Opcional)" maxlength="30">
         <button type="submit" class="btn btn-full">Cadastrar Dívida</button>
       </form>
@@ -147,7 +148,6 @@
     </section>
 
     <section id="tab-budgets" class="tab-content">
-      <p class="sim-help">Defina limites mensais de gastos para cada categoria.</p>
       <form id="budget-form" class="form">
         <select id="budget-category"></select>
         <input type="number" id="budget-amount" placeholder="Limite (R$)" step="0.01" min="1" required>
@@ -157,7 +157,6 @@
     </section>
 
     <section id="tab-simulator" class="tab-content">
-      <p class="sim-help">Preencha os campos para ver o poder dos juros compostos.</p>
       <div class="form sim-form">
         <div class="input-group"><label>Capital Inicial (R$)</label><input type="number" id="sim-initial" min="0" step="0.01" value="0"></div>
         <div class="input-group"><label>Aporte Mensal (R$)</label><input type="number" id="sim-monthly" min="0" step="0.01" value="0"></div>
@@ -173,7 +172,6 @@
     </section>
 
     <section id="tab-reserve" class="tab-content">
-      <p class="sim-help">Descubra quanto você precisa guardar para viver tranquilo sem depender de salário.</p>
       <div class="form sim-form">
         <div class="input-group"><label>Custo de vida mensal (R$)</label><input type="number" id="res-cost" min="0" step="0.01" value="0"></div>
         <div class="input-group"><label>Meses de proteção</label><input type="number" id="res-months" min="1" max="24" step="1" value="6"></div>
@@ -243,7 +241,6 @@
         </form>
       </div>
 
-      <!-- CONQUISTAS (GAMIFICAÇÃO) -->
       <div class="chart-container">
         <h3>Suas Conquistas</h3>
         <div id="achievements-grid" class="badge-grid"></div>
@@ -273,7 +270,7 @@
       </div>
 
       <div class="chart-container">
-        <h3>Segurança</h3>
+        <h3>Segurança Avançada</h3>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
           <button id="btn-change-pin" class="btn btn-outline">🔑 Alterar PIN</button>
           <button id="btn-wipe-data" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">🚨 Apagar Todos os Dados</button>
@@ -297,11 +294,12 @@
     </section>
 
     <footer>
-      <p>Capitalizze &copy; 2026 - v1.2.0</p>
+      <p>Capitalizze &copy; 2026 - v1.1.6</p>
       <p>Desenvolvido por <strong>SaliX</strong></p>
     </footer>
   </div>
 
+  <!-- MODAIS EXISTENTES -->
   <div id="goal-modal" class="modal-overlay">
     <div class="modal-content">
       <h3 id="modal-goal-title">Adicionar valor</h3>
@@ -335,6 +333,21 @@
       <div class="modal-actions">
         <button class="btn btn-outline" id="cancel-debt-payment">Cancelar</button>
         <button class="btn" id="confirm-debt-payment">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOVO MODAL DO TOUR DE BOAS-VINDAS -->
+  <div id="tour-modal" class="modal-overlay" style="z-index: 9999;">
+    <div class="modal-content" style="text-align: center; max-width: 450px;">
+      <div id="tour-icon" style="font-size: 4rem; margin-bottom: 16px;">👋</div>
+      <h3 id="tour-title" style="margin-bottom: 12px;">Bem-vindo ao Capitalizze!</h3>
+      <p id="tour-text" class="modal-desc" style="font-size: 1rem; line-height: 1.6; margin-bottom: 24px;">
+        Seu novo gerenciador financeiro. Vamos fazer um tour rápido para você saber onde fica cada coisa.
+      </p>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <button class="btn btn-outline" id="tour-skip">Pular Tour</button>
+        <button class="btn" id="tour-next">Próximo</button>
       </div>
     </div>
   </div>

@@ -494,3 +494,73 @@ export function showToast(message, type = 'success', actionText = null, actionCa
   toastContainer.appendChild(toast);
   setTimeout(() => { if (document.body.contains(toast)) { toast.style.animation = 'slideOutRight 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); } }, 4000);
 }
+// --- SISTEMA DE TOUR DE BOAS-VINDAS ---
+const tourSteps = [
+  {
+    icon: '👋',
+    title: 'Bem-vindo ao Capitalizze!',
+    text: 'Seu novo gerenciador financeiro. Vamos fazer um tour rápido para você saber onde fica cada coisa.'
+  },
+  {
+    icon: '💰',
+    title: 'Adicione suas Transações',
+    text: 'Na aba "Início", você pode registrar tudo o que entra e sai do seu dinheiro. O app já calcula seu saldo automaticamente.'
+  },
+  {
+    icon: '🎯',
+    title: 'Contas, Metas e Dívidas',
+    text: 'Use as abas superiores (ou o menu inferior no celular) para não esquecer contas a pagar, criar metas de economia e gerenciar dívidas.'
+  },
+  {
+    icon: '🛡️',
+    title: 'Segurança Máxima',
+    text: 'Todos os seus dados são criptografados. Se você ficar 2 minutos sem mexer, o app se bloqueia sozinho por segurança!'
+  }
+];
+
+let currentTourStep = 0;
+
+export function startTour() {
+  const tourModal = document.getElementById('tour-modal');
+  if (!tourModal) return;
+  
+  currentTourStep = 0;
+  updateTourUI();
+  tourModal.classList.add('active');
+}
+
+function updateTourUI() {
+  const step = tourSteps[currentTourStep];
+  document.getElementById('tour-icon').textContent = step.icon;
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-text').textContent = step.text;
+  
+  const btnNext = document.getElementById('tour-next');
+  const btnSkip = document.getElementById('tour-skip');
+  
+  if (currentTourStep === tourSteps.length - 1) {
+    btnNext.textContent = 'Começar a Usar';
+  } else {
+    btnNext.textContent = 'Próximo';
+  }
+
+  btnNext.onclick = async () => {
+    if (currentTourStep < tourSteps.length - 1) {
+      currentTourStep++;
+      updateTourUI();
+    } else {
+      await finishTour();
+    }
+  };
+
+  btnSkip.onclick = async () => {
+    await finishTour();
+  };
+}
+
+async function finishTour() {
+  document.getElementById('tour-modal').classList.remove('active');
+  state.profile.hasSeenTour = true;
+  await saveData('capitalizze.profile', state.profile);
+  showToast('Tour concluído! Bom proveito.', 'success');
+}

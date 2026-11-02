@@ -6,9 +6,15 @@ export let state = {
   bills: [],
   debts: [],
   recurring: [],
-  achievements: [], // NOVO: Guarda os IDs das conquistas desbloqueadas
+  achievements: [],
   categories: ['Geral', 'Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Salário', 'Investimento', 'Dívidas'],
-  profile: { name: 'Visitante', email: '', avatar: null, joined: Date.now() }
+  profile: { 
+    name: 'Visitante', 
+    email: '', 
+    avatar: null, 
+    joined: Date.now(),
+    hasSeenTour: false // NOVO: Controle do Tour
+  }
 };
 
 export const AVAILABLE_BANKS = ['Nubank', 'Inter', 'Itaú', 'Bradesco', 'Caixa', 'Santander', 'C6 Bank', 'PicPay', 'Mercado Pago'];

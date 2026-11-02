@@ -2,7 +2,7 @@ import { deriveKey } from './crypto.js';
 import { setMasterKey, hasSavedData, loadData, saveData } from './storage.js';
 import { state, AVAILABLE_BANKS } from './state.js';
 import { renderAll } from './ui.js';
-import { initEvents, checkAchievements, showToast } from './events.js';
+import { initEvents, startTour, showToast } from './events.js';
 
 const setupScreen = document.getElementById('setup-screen');
 const newPinInput = document.getElementById('new-pin-input');
@@ -13,6 +13,8 @@ const lockScreen = document.getElementById('lock-screen');
 const pinInput = document.getElementById('pin-input');
 const pinSubmit = document.getElementById('pin-submit');
 const lockMsg = document.getElementById('lock-msg');
+
+const loadingScreen = document.getElementById('loading-screen'); // NOVO
 
 function initSecurityFlow() {
   if (hasSavedData()) {
@@ -46,28 +48,43 @@ setupSubmit.addEventListener('click', async () => {
 
   try {
     setupSubmit.textContent = 'Criando conta...';
+    
+    // Mostra a tela de Loading
+    setupScreen.style.display = 'none';
+    loadingScreen.style.display = 'flex';
+    lockScreen.style.display = 'none';
+
     const key = await deriveKey(pin);
     setMasterKey(key);
     state.banks = selectedBanks;
     state.profile.joined = Date.now();
+    
     await saveData('capitalizze.banks', state.banks);
     await saveData('capitalizze.profile', state.profile);
     await saveData('capitalizze.transactions', state.transactions);
     await saveData('capitalizze.categories', state.categories);
     await saveData('capitalizze.achievements', state.achievements);
+    
     unlockApp();
   } catch (error) {
     console.error(error);
     alert('Erro ao criar a conta. Tente novamente.');
     setupSubmit.textContent = 'Criar Conta e Acessar';
+    loadingScreen.style.display = 'none';
+    setupScreen.style.display = 'flex';
   }
 });
 
 async function handlePin() {
   const pin = pinInput.value;
   if (pin.length < 4 || pin.length > 6) { lockMsg.textContent = 'O PIN deve ter entre 4 e 6 dígitos.'; return; }
-  lockMsg.textContent = 'Descriptografando...';
   
+  lockMsg.textContent = 'Verificando...';
+  
+  // Mostra a tela de Loading
+  lockScreen.style.display = 'none';
+  loadingScreen.style.display = 'flex';
+
   try {
     const key = await deriveKey(pin);
     setMasterKey(key); 
@@ -83,17 +100,22 @@ async function handlePin() {
       state.debts = await loadData('capitalizze.debts', []);
       state.recurring = await loadData('capitalizze.recurring', []);
       state.categories = await loadData('capitalizze.categories', state.categories);
-      state.achievements = await loadData('capitalizze.achievements', []); // Carrega Conquistas
+      state.achievements = await loadData('capitalizze.achievements', []);
       unlockApp();
     } else {
       setMasterKey(null);
       lockMsg.textContent = 'PIN incorreto. Tente novamente.';
       pinInput.value = '';
+      // Esconde Loading e mostra bloqueio de novo
+      loadingScreen.style.display = 'none';
+      lockScreen.style.display = 'flex';
       pinInput.focus();
     }
   } catch (error) {
     console.error(error);
     lockMsg.textContent = 'Erro ao desbloquear. Tente novamente.';
+    loadingScreen.style.display = 'none';
+    lockScreen.style.display = 'flex';
   }
 }
 
@@ -101,20 +123,22 @@ pinSubmit.addEventListener('click', handlePin);
 pinInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handlePin(); });
 
 function unlockApp() {
-  setupScreen.classList.add('hidden');
-  lockScreen.classList.add('hidden');
+  // O Loading já está ativo, apenas escondemos tudo e mostramos o conteúdo
   setTimeout(() => {
-    setupScreen.style.display = 'none';
-    lockScreen.style.display = 'none';
-  }, 500);
+    loadingScreen.style.display = 'none';
+  }, 800); // Pequeno delay para a animação do Loading ser visível
 
   if (localStorage.getItem('capitalizze.theme') === 'light') document.body.classList.add('light-mode');
 
   processRecurringTransactions();
-  checkAchievements(); // Verifica conquistas ao abrir
   renderAll();
   initEvents();
   checkDueBills(); 
+  
+  // Dispara o Tour se for a primeira vez
+  if (!state.profile.hasSeenTour) {
+    setTimeout(startTour, 1000); // Espera 1 segundo para o app carregar antes de abrir o tour
+  }
 }
 
 async function processRecurringTransactions() {
@@ -168,7 +192,6 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
       setInterval(() => registration.update(), 60 * 60 * 1000);
-      
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         newWorker.addEventListener('statechange', () => {
