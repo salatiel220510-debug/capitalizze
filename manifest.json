@@ -1,7 +1,7 @@
 {
   "name": "Capitalizze",
   "short_name": "Capitalizze",
-  "start_url": "/",
+  "start_url": "/app.html",
   "display": "standalone",
   "background_color": "#090d16",
   "theme_color": "#090d16",

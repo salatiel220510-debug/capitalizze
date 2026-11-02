@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capitalizze — O poder do seu dinheiro</title>
+  
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090d16">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+</head>
+<body>
+
+  <div id="setup-screen" class="lock-screen" style="display: none;">
+    <div class="lock-content" style="max-width: 450px;">
+      <img src="assets/logo.png" alt="Capitalizze" style="width: 80px; margin-bottom: 15px;">
+      <h2>Bem-vindo ao Capitalizze</h2>
+      <p>Vamos configurar seu acesso e seus bancos iniciais.</p>
+      <div style="text-align: left; margin-bottom: 20px;">
+        <label style="font-size: 0.85rem; color: var(--muted); margin-bottom: 5px; display: block;">Crie um PIN (4 a 6 dígitos)</label>
+        <input type="password" id="new-pin-input" maxlength="6" inputmode="numeric" placeholder="••••" style="text-align:center; font-size: 1.5rem; letter-spacing: 5px; width: 100%;">
+        <label style="font-size: 0.85rem; color: var(--muted); margin-top: 15px; margin-bottom: 5px; display: block;">Quais bancos você usa?</label>
+        <div id="setup-banks-grid" class="banks-grid" style="grid-template-columns: 1fr 1fr;"></div>
+      </div>
+      <button id="setup-submit" class="btn btn-full">Criar Conta e Acessar</button>
+    </div>
+  </div>
+
+  <div id="lock-screen" class="lock-screen" style="display: none;">
+    <div class="lock-content">
+      <img src="assets/logo.png" alt="Capitalizze" style="width: 100px; margin-bottom: 20px;">
+      <h2>Capitalizze Protegido</h2>
+      <p id="lock-msg">Digite seu PIN para acessar.</p>
+      <input type="password" id="pin-input" maxlength="6" inputmode="numeric" placeholder="••••" style="text-align:center; font-size: 2rem; letter-spacing: 10px;">
+      <button id="pin-submit" class="btn btn-full" style="margin-top: 20px;">Desbloquear</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="header-top">
+        <img src="assets/logo-horizontal.png" alt="Capitalizze" class="header-logo">
+      </div>
+      <div class="slogan">O poder do seu dinheiro na palma da sua mão</div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="home">Início</button>
+      <button class="tab-btn" data-tab="transactions">Transações</button>
+      <button class="tab-btn" data-tab="bills">Contas <span id="bills-badge" class="badge" style="display: none;">!</span></button>
+      <button class="tab-btn" data-tab="debts">Dívidas</button>
+      <button class="tab-btn" data-tab="goals">Metas</button>
+      <button class="tab-btn" data-tab="budgets">Orçamentos</button>
+      <button class="tab-btn" data-tab="simulator">Simulador</button>
+      <button class="tab-btn" data-tab="reserve">Reserva</button>
+      <button class="tab-btn" data-tab="calculator">Calculadora</button>
+      <button class="tab-btn" data-tab="charts">Gráficos</button>
+      <button class="tab-btn" data-tab="settings">Ajustes</button>
+    </nav>
+
+    <section id="tab-home" class="tab-content active">
+      <section class="cards">
+        <div class="card"><div class="card-label">Saldo Global</div><div class="card-value" id="balance">R$ 0,00</div></div>
+        <div class="card"><div class="card-label">Entradas Globais</div><div class="card-value income" id="income">R$ 0,00</div></div>
+        <div class="card"><div class="card-label">Saídas Globais</div><div class="card-value expense" id="expense">R$ 0,00</div></div>
+      </section>
+
+      <div id="bank-summary-container" style="display: none;">
+        <h3 class="section-title">Resumo por Banco</h3>
+        <section class="cards" id="bank-cards"></section>
+      </div>
+
+      <form class="form" id="tx-form">
+        <input type="text" id="desc" placeholder="Descrição (ex: Salário)" required maxlength="60">
+        <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+        <select id="type"><option value="income">Entrada</option><option value="expense">Saída</option></select>
+        <select id="category"></select>
+        <select id="tx-bank" style="display: none;"></select>
+        <button type="submit" class="btn btn-full" id="submit-btn">Adicionar Entrada</button>
+      </form>
+    </section>
+
+    <section id="tab-transactions" class="tab-content">
+      <div class="filter-container" style="flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
+        <select id="month-filter"><option value="all">Todos os meses</option></select>
+        <select id="filter-type">
+          <option value="all">Todos os tipos</option>
+          <option value="income">Apenas Entradas</option>
+          <option value="expense">Apenas Saídas</option>
+        </select>
+        <input type="text" id="search-tx" placeholder="Buscar por descrição ou categoria..." style="flex: 1; min-width: 200px;">
+      </div>
+      <div class="list"><div id="tx-list"></div></div>
+    </section>
+
+    <section id="tab-bills" class="tab-content">
+      <div class="chart-container" style="padding: 20px;">
+        <h3>Lançamentos Recorrentes (Automáticos)</h3>
+        <p class="sim-help" style="margin-bottom: 12px; font-size: 0.85rem;">Cadastre contas fixas para serem lançadas automaticamente todo mês.</p>
+        <form id="rec-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="rec-desc" placeholder="Descrição (ex: Salário)" required maxlength="40">
+          <input type="number" id="rec-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+          <select id="rec-type"><option value="income">Entrada</option><option value="expense">Saída</option></select>
+          <select id="rec-category"></select>
+          <input type="number" id="rec-day" placeholder="Dia do mês (1-31)" min="1" max="31" required>
+          <button type="submit" class="btn btn-full">Criar Lançamento Fixo</button>
+        </form>
+        <div class="list" id="recurring-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
+      </div>
+
+      <div class="chart-container" style="padding: 20px;">
+        <h3>Contas a Pagar / Receber (Manuais)</h3>
+        <form id="bill-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="bill-desc" placeholder="Descrição (ex: Aluguel)" required maxlength="40">
+          <input type="number" id="bill-amount" placeholder="Valor (R$)" step="0.01" min="0.01" required>
+          <select id="bill-type"><option value="pay">A Pagar</option><option value="receive">A Receber</option></select>
+          <input type="number" id="bill-day" placeholder="Dia Venc. (1-31)" min="1" max="31" required>
+          <button type="submit" class="btn btn-full">Cadastrar Conta</button>
+        </form>
+        <div class="list" id="bills-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
+      </div>
+    </section>
+
+    <section id="tab-debts" class="tab-content">
+      <p class="sim-help">Gerencie o que você deve ou o que devem para você.</p>
+      <form id="debt-form" class="form">
+        <input type="text" id="debt-desc" placeholder="Descrição (ex: Empréstimo João)" required maxlength="40">
+        <input type="number" id="debt-amount" placeholder="Valor Total (R$)" step="0.01" min="0.01" required>
+        <select id="debt-type">
+          <option value="owe">Eu Devo (A Pagar)</option>
+          <option value="receive">Me Devem (A Receber)</option>
+        </select>
+        <input type="text" id="debt-person" placeholder="Para quem / De quem (Opcional)" maxlength="30">
+        <button type="submit" class="btn btn-full">Cadastrar Dívida</button>
+      </form>
+      <div class="list" id="debts-list"></div>
+    </section>
+
+    <section id="tab-goals" class="tab-content">
+      <form id="goal-form" class="form">
+        <input type="text" id="goal-name" placeholder="Nome da meta (ex: Notebook novo)" required maxlength="40">
+        <input type="number" id="goal-target" placeholder="Valor alvo (R$)" step="0.01" min="1" required>
+        <button type="submit" class="btn btn-full">Criar Nova Meta</button>
+      </form>
+      <div class="list" id="goals-list"></div>
+    </section>
+
+    <section id="tab-budgets" class="tab-content">
+      <p class="sim-help">Defina limites mensais de gastos para cada categoria.</p>
+      <form id="budget-form" class="form">
+        <select id="budget-category"></select>
+        <input type="number" id="budget-amount" placeholder="Limite (R$)" step="0.01" min="1" required>
+        <button type="submit" class="btn btn-full">Definir Orçamento</button>
+      </form>
+      <div class="list" id="budgets-list"></div>
+    </section>
+
+    <section id="tab-simulator" class="tab-content">
+      <p class="sim-help">Preencha os campos para ver o poder dos juros compostos.</p>
+      <div class="form sim-form">
+        <div class="input-group"><label>Capital Inicial (R$)</label><input type="number" id="sim-initial" min="0" step="0.01" value="0"></div>
+        <div class="input-group"><label>Aporte Mensal (R$)</label><input type="number" id="sim-monthly" min="0" step="0.01" value="0"></div>
+        <div class="input-group"><label>Taxa de Juros (% ao mês)</label><input type="number" id="sim-rate" min="0" step="0.01" value="0"></div>
+        <div class="input-group"><label>Tempo (Meses)</label><input type="number" id="sim-time" min="0" step="1" value="0"></div>
+      </div>
+      <section class="cards">
+        <div class="card"><div class="card-label">Total Investido</div><div class="card-value" id="sim-total-invested">R$ 0,00</div></div>
+        <div class="card"><div class="card-label">Juros Ganhos</div><div class="card-value income" id="sim-interest">R$ 0,00</div></div>
+        <div class="card"><div class="card-label">Montante Final</div><div class="card-value" id="sim-final">R$ 0,00</div></div>
+      </section>
+      <div class="chart-container"><h3>Proporção: Investido vs Juros</h3><div id="sim-chart-bars" class="chart-bars"></div></div>
+    </section>
+
+    <section id="tab-reserve" class="tab-content">
+      <p class="sim-help">Descubra quanto você precisa guardar para viver tranquilo sem depender de salário.</p>
+      <div class="form sim-form">
+        <div class="input-group"><label>Custo de vida mensal (R$)</label><input type="number" id="res-cost" min="0" step="0.01" value="0"></div>
+        <div class="input-group"><label>Meses de proteção</label><input type="number" id="res-months" min="1" max="24" step="1" value="6"></div>
+      </div>
+      <div class="card" style="text-align: center; padding: 40px 20px;">
+        <div class="card-label">Sua Reserva Ideal é</div>
+        <div class="card-value income" id="res-result" style="font-size: 2.5rem;">R$ 0,00</div>
+      </div>
+    </section>
+
+    <section id="tab-calculator" class="tab-content">
+      <div class="chart-container" style="margin-bottom: 24px;">
+        <h3>Calculadora de Taxas e Parcelamento</h3>
+        <div class="form sim-form" style="margin-bottom: 16px; padding: 0; border: none; box-shadow: none;">
+          <div class="input-group"><label>Valor da Compra (R$)</label><input type="number" id="calc-value" min="0" step="0.01" value="0"></div>
+          <div class="input-group"><label>Taxa de Juros (%)</label><input type="number" id="calc-fee" min="0" step="0.01" value="0"></div>
+          <div class="input-group"><label>Número de Parcelas</label><input type="number" id="calc-installments" min="1" step="1" value="1"></div>
+        </div>
+        <div class="cards" style="margin-bottom: 0;">
+          <div class="card"><div class="card-label">Valor Total com Juros</div><div class="card-value expense" id="calc-total">R$ 0,00</div></div>
+          <div class="card"><div class="card-label">Valor da Parcela</div><div class="card-value" id="calc-per-installment">R$ 0,00</div></div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <h3>Calculadora de Gasto Diário</h3>
+        <div class="form sim-form" style="margin-bottom: 16px; padding: 0; border: none; box-shadow: none;">
+          <div class="input-group"><label>Renda Mensal Líquida (R$)</label><input type="number" id="daily-income" min="0" step="0.01" value="0"></div>
+          <div class="input-group"><label>Gastos Fixos Mensais (R$)</label><input type="number" id="daily-fixed" min="0" step="0.01" value="0"></div>
+        </div>
+        <div class="card" style="text-align: center; padding: 30px 20px;">
+          <div class="card-label">Você pode gastar por dia</div>
+          <div class="card-value income" id="daily-result" style="font-size: 2.5rem;">R$ 0,00</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-charts" class="tab-content">
+      <div class="chart-container">
+        <h3>Distribuição de Gastos</h3>
+        <div id="donut-chart" class="donut-container"></div>
+      </div>
+      <div class="chart-container">
+        <h3>Gastos por Categoria</h3>
+        <div id="chart-bars" class="chart-bars"></div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-content">
+      <div class="chart-container">
+        <h3>Perfil do Usuário</h3>
+        <div class="profile-header">
+          <div class="avatar-container">
+            <img id="profile-avatar-img" src="" alt="Avatar" style="display: none;">
+            <span id="profile-avatar-placeholder">👤</span>
+          </div>
+          <div class="profile-info">
+            <h4 id="profile-display-name">Visitante</h4>
+            <p id="profile-display-email">email@exemplo.com</p>
+            <p style="font-size: 0.8rem; color: var(--muted); margin-top: 4px;" id="profile-display-date">Membro desde: Hoje</p>
+          </div>
+        </div>
+        <form id="profile-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 0;">
+          <div class="input-group"><label>Nome</label><input type="text" id="prof-name" placeholder="Seu nome" maxlength="30"></div>
+          <div class="input-group"><label>E-mail</label><input type="email" id="prof-email" placeholder="seu@email.com"></div>
+          <div class="input-group" style="grid-column: 1 / -1;"><label>Foto de Perfil</label><input type="file" id="prof-avatar-input" accept="image/*"></div>
+          <button type="submit" class="btn btn-full">Salvar Perfil</button>
+        </form>
+      </div>
+
+      <!-- CONQUISTAS (GAMIFICAÇÃO) -->
+      <div class="chart-container">
+        <h3>Suas Conquistas</h3>
+        <div id="achievements-grid" class="badge-grid"></div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Minhas Categorias</h3>
+        <form id="category-form" class="form" style="padding: 0; border: none; box-shadow: none; margin-bottom: 16px;">
+          <input type="text" id="new-category-name" placeholder="Nova Categoria (ex: Pets)" required maxlength="20">
+          <button type="submit" class="btn btn-full">Adicionar Categoria</button>
+        </form>
+        <div class="list" id="categories-list" style="margin-bottom: 0; border: none; box-shadow: none; background: transparent;"></div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Aparência e Segurança</h3>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Modo Escuro / Claro</span>
+            <button id="theme-toggle-settings" class="btn btn-outline" style="padding: 8px 16px;">🌓 Alternar</button>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>Notificações de Contas</span>
+            <button id="btn-enable-notifications" class="btn btn-outline" style="padding: 8px 16px;">🔔 Ativar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Segurança</h3>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <button id="btn-change-pin" class="btn btn-outline">🔑 Alterar PIN</button>
+          <button id="btn-wipe-data" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">🚨 Apagar Todos os Dados</button>
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Meus Bancos</h3>
+        <div id="banks-checkboxes" class="banks-grid"></div>
+      </div>
+
+      <div class="chart-container">
+        <h3>Backup e Exportação</h3>
+        <div class="backup-actions" style="justify-content: flex-start; flex-wrap: wrap;">
+          <button id="btn-export" class="btn btn-outline">⬇️ Backup (JSON)</button>
+          <label for="import-file" class="btn btn-outline">⬆️ Restaurar</label>
+          <input type="file" id="import-file" accept=".json" style="display: none;">
+          <button id="btn-export-csv" class="btn btn-outline">📊 Exportar Excel (CSV)</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Capitalizze &copy; 2026 - v1.2.0</p>
+      <p>Desenvolvido por <strong>SaliX</strong></p>
+    </footer>
+  </div>
+
+  <div id="goal-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3 id="modal-goal-title">Adicionar valor</h3>
+      <p class="modal-desc">Quanto você quer guardar para esta meta?</p>
+      <input type="number" id="modal-goal-amount" placeholder="R$ 0,00" step="0.01" min="0.01">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="modal-cancel">Cancelar</button>
+        <button class="btn" id="modal-confirm">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="change-pin-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Alterar PIN de Acesso</h3>
+      <p class="modal-desc">Isso vai re-criptografar todos os seus dados com a nova senha.</p>
+      <input type="password" id="old-pin" placeholder="PIN Atual" maxlength="6" style="margin-bottom: 12px;">
+      <input type="password" id="new-pin" placeholder="Novo PIN" maxlength="6">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="cancel-change-pin">Cancelar</button>
+        <button class="btn" id="confirm-change-pin">Salvar Novo PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="debt-payment-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h3 id="modal-debt-title">Abater Dívida</h3>
+      <p class="modal-desc">Quanto foi pago ou recebido?</p>
+      <input type="number" id="modal-debt-amount" placeholder="R$ 0,00" step="0.01" min="0.01">
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="cancel-debt-payment">Cancelar</button>
+        <button class="btn" id="confirm-debt-payment">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
