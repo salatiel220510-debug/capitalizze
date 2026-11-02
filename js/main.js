@@ -188,6 +188,15 @@ function checkDueBills() {
 
 initSecurityFlow();
 
+// Carrega o Vercel Analytics apenas se estiver no ambiente de produção
+if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  const script = document.createElement('script');
+  script.defer = true;
+  script.src = '/_vercel/insights/script.js';
+  document.head.appendChild(script);
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
